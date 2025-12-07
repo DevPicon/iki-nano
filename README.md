@@ -4,6 +4,13 @@ A native iOS application for running on-device language models using MediaPipe.
 
 > **Educational Purpose:** This project is designed for learning and educational purposes, demonstrating how to integrate and run large language models on iOS devices using MediaPipe Tasks GenAI.
 
+## Screenshots
+
+<p align="center">
+  <img src="screenshots/Simulator Screenshot - iPhone 17 01.png" alt="Model Download Screen" height="500">
+  <img src="screenshots/Simulator Screenshot - iPhone 17 02.png" alt="Inference Screen" height="500">
+</p>
+
 ## Features
 
 - Download and manage language models locally
