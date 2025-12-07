@@ -1,0 +1,73 @@
+# Xcode
+.DS_Store
+/build/
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.forcemode1v3
+*.xcide
+*.hmap
+*.perspectivev3
+!default.perspectivev3
+xcuserdata/
+/*.xccheckout
+/*.dot
+*.xcscheme
+!default.xcscheme
+*.xcscmblueprint
+.swiftpm/xcode/package.pins
+.swiftpm/xcode/repositories/
+
+# CocoaPods
+/Pods
+/Podfile.lock
+
+# fastlane
+/fastlane/report.xml
+/fastlane/Preview.html
+/fastlane/screenshots
+
+# Other
+.AppleShowAllFiles
+.localized
+.lsbom
+.tool_type
+.Boop
+*.dSYM
+*.apg
+*.iws
+*.bak
+*.xcuserstate
+*.moved-aside
+*.pyc
+*.swp
+*~.nib
+.ibautolayout
+.lldb
+
+# Custom
+# Add other patterns here as needed
+# Local configuration files (not to be committed)
+ikinano/Config.swift
+
+# Generated files
+*.o
+*.lo
+*.la
+*.al
+*.libs
+*.so
+*.a
+*.pyc
+*.pyo
+*.rej
+*.bak
+*~
+*.log
+*.aux
+*.out
+*.toc
+
+# Swift Package Manager
+.build/
