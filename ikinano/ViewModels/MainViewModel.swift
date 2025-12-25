@@ -160,7 +160,10 @@ final class MainViewModel {
 // MARK: - Inference Task Types
 enum InferenceTask {
     case summarize
+    case proofreading
     case rewriteFormal
+    case rewriteCasual
+    case rewriteConcise
 
     func buildPrompt(with text: String) -> String {
         switch self {
@@ -170,6 +173,17 @@ enum InferenceTask {
             Keep the key ideas, remove redundancies, and avoid adding new information.
             Return the summary in one short paragraph.
             Do not include any introductory phrases. Return ONLY the summary text.
+            Text:
+            \"\"\"
+            \(text)
+            \"\"\"
+            """
+        case .proofreading:
+            return """
+            Proofread the following text. Fix grammar, spelling, punctuation, and syntax errors.
+            Preserve the original meaning and style.
+            Return ONLY the corrected text without explanations.
+
             Text:
             \"\"\"
             \(text)
@@ -187,6 +201,29 @@ enum InferenceTask {
             \(text)
             \"\"\"
             """
+        case .rewriteCasual:
+            return """
+            Rewrite the following text in a casual, friendly tone.
+            Preserve the original meaning, use conversational language,
+            and make it more approachable.
+            Return only the rewritten text.
+            Do not include any introductory phrases. Return ONLY the rewritten text.
+            Text:
+            \"\"\"
+            \(text)
+            \"\"\"
+            """
+        case .rewriteConcise:
+            return """
+            Rewrite the following text to be more concise and direct.
+            Remove unnecessary words while preserving all key information.
+            Return only the rewritten text.
+            Do not include any introductory phrases. Return ONLY the rewritten text.
+            Text:
+            \"\"\"
+            \(text)
+            \"\"\"
+            """
         }
     }
 
@@ -194,8 +231,14 @@ enum InferenceTask {
         switch self {
         case .summarize:
             return "Resumir Texto"
+        case .proofreading:
+            return "Corregir Texto"
         case .rewriteFormal:
             return "Reescribir Formal"
+        case .rewriteCasual:
+            return "Reescribir Casual"
+        case .rewriteConcise:
+            return "Reescribir Conciso"
         }
     }
 }
