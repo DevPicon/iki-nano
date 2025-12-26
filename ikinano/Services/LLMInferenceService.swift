@@ -69,6 +69,55 @@ final class LLMInferenceService {
             onPartialResponse(result)
         }
     }
+
+    /// Generate a response with comprehensive metrics collection
+    /// - Parameters:
+    ///   - capability: The inference capability being used
+    ///   - inputText: The raw input text
+    ///   - prompt: The formatted prompt with instructions
+    /// - Returns: InferenceMetrics containing output and performance data
+    /// - Throws: Error if inference fails or model not initialized
+    func generateResponseWithMetrics(
+        capability: InferenceCapability,
+        inputText: String,
+        prompt: String
+    ) async throws -> InferenceMetrics {
+        guard llmInference != nil, isInitialized else {
+            throw LLMError.modelNotInitialized
+        }
+
+        let totalStartTime = Date()
+        let startMemory = MemoryTracker.getCurrentMemoryUsageMB()
+
+        let inputTokenCount = TokenCounter.estimateTokens(text: inputText)
+        let inputCharCount = inputText.count
+
+        let outputText = try await generateResponse(prompt: prompt)
+
+        let totalEndTime = Date()
+        let endMemory = MemoryTracker.getCurrentMemoryUsageMB()
+        let peakMemory = MemoryTracker.getPeakMemoryMB()
+
+        let outputTokenCount = TokenCounter.estimateTokens(text: outputText)
+        let outputCharCount = outputText.count
+
+        let totalTimeMs = Int64(totalEndTime.timeIntervalSince(totalStartTime) * 1000)
+
+        return InferenceMetrics(
+            capability: capability,
+            inputText: inputText,
+            inputTokenCount: inputTokenCount,
+            inputCharCount: inputCharCount,
+            outputText: outputText,
+            outputTokenCount: outputTokenCount,
+            outputCharCount: outputCharCount,
+            modelLoadTimeMs: nil,
+            inferenceTimeMs: totalTimeMs,
+            totalTimeMs: totalTimeMs,
+            memoryUsedMB: endMemory - startMemory,
+            peakMemoryMB: peakMemory
+        )
+    }
 }
 
 // MARK: - LLM Errors
