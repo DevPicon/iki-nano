@@ -9,6 +9,8 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var viewModel = MainViewModel()
+    @State private var selectedCapability: InferenceCapability?
+    @State private var showInferenceView: Bool = false
 
     var body: some View {
         Group {
@@ -28,7 +30,15 @@ struct ContentView: View {
                 }
 
             case .ready, .processing:
-                InferenceView(viewModel: viewModel)
+                MainMenuView { capability in
+                    selectedCapability = capability
+                    showInferenceView = true
+                }
+                .sheet(isPresented: $showInferenceView) {
+                    if let capability = selectedCapability {
+                        InferenceView(capability: capability, viewModel: viewModel)
+                    }
+                }
 
             case .error(let message):
                 ErrorView(message: message) {
@@ -36,7 +46,7 @@ struct ContentView: View {
                     viewModel.state = .idle
                 }
             }
-            
+
         }
     }
 }
