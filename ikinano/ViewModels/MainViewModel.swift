@@ -13,7 +13,7 @@ import Observation
 final class MainViewModel {
     // MARK: - Properties
     private let modelFileService = ModelFileService()
-    private let llmInferenceService = LLMInferenceService()
+    let llmInferenceService = LLMInferenceService()
 
     var state: AppState = .idle
     var generatedResponse: String = ""
