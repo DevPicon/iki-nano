@@ -8,7 +8,7 @@ import SwiftUI
 struct MetricsCard: View {
     let metrics: InferenceMetrics
 
-    var body: View {
+    var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Performance Metrics")
                 .font(.headline)
@@ -46,7 +46,7 @@ struct MetricRow: View {
     let label: String
     let value: String
 
-    var body: View {
+    var body: some View {
         HStack {
             Text(label)
                 .foregroundColor(.secondary)
@@ -76,3 +76,4 @@ struct MetricRow: View {
     )
     .padding()
 }
+

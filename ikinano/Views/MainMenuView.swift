@@ -8,8 +8,8 @@ import SwiftUI
 struct MainMenuView: View {
     let onCapabilitySelected: (InferenceCapability) -> Void
 
-    var body: View {
-        NavigationView {
+    var body: some View {
+        NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     Text("Iki Nano")
@@ -70,7 +70,7 @@ struct CapabilityCard: View {
     let icon: String
     let onTap: () -> Void
 
-    var body: View {
+    var body: some View {
         Button(action: onTap) {
             HStack(spacing: 16) {
                 Image(systemName: icon)

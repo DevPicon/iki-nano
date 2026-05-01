@@ -88,10 +88,7 @@ extension InferenceMetrics {
 extension MetricsEntity {
     func toDomain() -> InferenceMetrics {
         InferenceMetrics(
-            id: id,
-            timestamp: timestamp,
             capability: InferenceCapability(rawValue: capability) ?? .summarization,
-            platform: platform,
             inputText: inputText,
             inputTokenCount: inputTokenCount,
             inputCharCount: inputCharCount,

@@ -10,7 +10,7 @@ struct TestDataSelector: View {
     let onTestCaseSelected: (TestCase) -> Void
     @Environment(\.dismiss) var dismiss
 
-    var body: View {
+    var body: some View {
         NavigationView {
             List(testCases) { testCase in
                 Button(action: {
@@ -37,7 +37,7 @@ struct TestDataSelector: View {
 struct TestCaseRow: View {
     let testCase: TestCase
 
-    var body: View {
+    var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(testCase.name)
@@ -87,3 +87,4 @@ struct TestCaseRow: View {
         onTestCaseSelected: { _ in }
     )
 }
+
