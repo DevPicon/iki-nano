@@ -10,7 +10,8 @@ import SwiftData
 struct ikinanoApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            MetricsEntity.self
+            MetricsEntity.self,
+            LLMModel.self
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
