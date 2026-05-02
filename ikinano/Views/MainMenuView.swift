@@ -6,7 +6,10 @@
 import SwiftUI
 
 struct MainMenuView: View {
+    @Bindable var viewModel: MainViewModel
     let onCapabilitySelected: (InferenceCapability) -> Void
+    
+    @State private var showingModelManagement = false
 
     var body: some View {
         NavigationStack {
@@ -17,10 +20,72 @@ struct MainMenuView: View {
                         .fontWeight(.bold)
                         .padding(.horizontal)
 
-                    Text("On-device AI with Gemma 2B")
+                    Text("On-device AI with Gemma")
                         .font(.title3)
                         .foregroundColor(.secondary)
                         .padding(.horizontal)
+                        
+                    // Active Model Section
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Modelo Activo")
+                            .font(.headline)
+                            .padding(.horizontal)
+                        
+                        Button(action: {
+                            showingModelManagement = true
+                        }) {
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    if let activeModel = viewModel.activeModel {
+                                        Text(activeModel.name)
+                                            .font(.headline)
+                                            .foregroundColor(.primary)
+                                        Text(activeModel.isCustom ? "Customizado" : "Por defecto")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    } else {
+                                        Text("Ningún modelo seleccionado")
+                                            .font(.headline)
+                                            .foregroundColor(.red)
+                                        Text("Toca para gestionar modelos")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding()
+                            .background(Color(.systemGray5))
+                            .cornerRadius(12)
+                        }
+                        .padding(.horizontal)
+                        
+                        if viewModel.activeModel != nil {
+                            if case .initializing = viewModel.state {
+                                HStack {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                    Text("Inicializando modelo en memoria...")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                .padding(.horizontal)
+                            } else if case .ready = viewModel.state {
+                                Text("Modelo cargado y listo para inferencia")
+                                    .font(.caption)
+                                    .foregroundColor(.green)
+                                    .padding(.horizontal)
+                            } else {
+                                Text("Modelo no inicializado")
+                                    .font(.caption)
+                                    .foregroundColor(.orange)
+                                    .padding(.horizontal)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 8)
 
                     Divider()
                         .padding(.vertical, 8)
@@ -57,10 +122,15 @@ struct MainMenuView: View {
                         )
                     }
                     .padding(.horizontal)
+                    .disabled(viewModel.state != .ready)
+                    .opacity(viewModel.state != .ready ? 0.5 : 1.0)
                 }
                 .padding(.vertical)
             }
             .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $showingModelManagement) {
+                ModelManagementView(viewModel: viewModel)
+            }
         }
     }
 }
@@ -105,5 +175,5 @@ struct CapabilityCard: View {
 }
 
 #Preview {
-    MainMenuView(onCapabilitySelected: { _ in })
+    MainMenuView(viewModel: MainViewModel(), onCapabilitySelected: { _ in })
 }

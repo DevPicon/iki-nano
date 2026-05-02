@@ -6,31 +6,24 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct ContentView: View {
     @State private var viewModel = MainViewModel()
     @State private var selectedCapability: InferenceCapability?
     @State private var showInferenceView: Bool = false
+    
+    @Environment(\.modelContext) private var modelContext
 
     var body: some View {
         Group {
             switch viewModel.state {
-            case .idle, .downloading, .initializing, .deleting:
-                DownloadView(
-                    state: viewModel.state,
-                    isModelDownloaded: viewModel.isModelDownloaded()
-                ) {
-                    viewModel.downloadModel()
-                } onContinue: {
-                    Task {
-                        await viewModel.continueToInference()
-                    }
-                } onDelete: {
-                    viewModel.deleteModel()
+            case .error(let message):
+                ErrorView(message: message) {
+                    viewModel.state = .idle
                 }
-
-            case .ready, .processing:
-                MainMenuView { capability in
+            default:
+                MainMenuView(viewModel: viewModel) { capability in
                     selectedCapability = capability
                     showInferenceView = true
                 }
@@ -39,14 +32,12 @@ struct ContentView: View {
                         InferenceView(capability: capability, viewModel: viewModel)
                     }
                 }
-
-            case .error(let message):
-                ErrorView(message: message) {
-                    // Reset to idle state to allow retry
-                    viewModel.state = .idle
+                .onAppear {
+                    // Ensure default models are loaded into SwiftData
+                    let repo = LLMModelRepository(modelContext: modelContext)
+                    try? repo.loadDefaultModelsIfNeeded()
                 }
             }
-
         }
     }
 }

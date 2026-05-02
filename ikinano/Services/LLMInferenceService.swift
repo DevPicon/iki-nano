@@ -12,18 +12,21 @@ import MediaPipeTasksGenAI
 final class LLMInferenceService {
     private var llmInference: LlmInference?
     private var isInitialized = false
+    private var currentModelPath: String?
 
     /// Initialize the LLM with the model file
     /// - Parameter modelPath: Absolute path to the .bin model file
     /// - Throws: Error if initialization fails
     func initialize(modelPath: String) async throws {
-        guard !isInitialized else { return }
+        // If already initialized with the same path, return early
+        if isInitialized && currentModelPath == modelPath { return }
 
         let options = LlmInference.Options(modelPath: modelPath)
         options.maxTokens = 512
 
         llmInference = try LlmInference(options: options)
         isInitialized = true
+        currentModelPath = modelPath
     }
 
     /// Generate a response for the given prompt

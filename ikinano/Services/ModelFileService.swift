@@ -124,7 +124,7 @@ extension ModelFileService: URLSessionDownloadDelegate {
             DispatchQueue.main.async {
                 state.onCompletion(.failure(error))
             }
-            activeDownloads.removeValue(forKey: taskIdentifier)
+            activeDownloads.removeValue(forKey: task.taskIdentifier)
         }
     }
 }
