@@ -8,5 +8,5 @@ target 'ikinano' do
 
   # Pods for ikinano
   pod 'MediaPipeTasksGenAI'
-
+  
 end

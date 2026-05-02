@@ -50,6 +50,7 @@ xcuserdata/
 # Add other patterns here as needed
 # Local configuration files (not to be committed)
 ikinano/Config.swift
+.gemini/
 
 # Generated files
 *.o

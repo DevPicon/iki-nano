@@ -2,168 +2,261 @@
 //  InferenceView.swift
 //  ikinano
 //
-//  Created by Armando Picon on 05-12-25.
-//
 
 import SwiftUI
 
 struct InferenceView: View {
+    let capability: InferenceCapability
     @Bindable var viewModel: MainViewModel
+    @Environment(\.dismiss) var dismiss
 
     @State private var inputText: String = ""
-    @State private var selectedTask: InferenceTask = .summarize
+    @State private var outputText: String = ""
+    @State private var metrics: InferenceMetrics?
+    @State private var isProcessing: Bool = false
+    @State private var errorMessage: String?
+    @State private var showTestDataSelector: Bool = false
+    @State private var selectedTestCase: TestCase?
     @FocusState private var isInputFocused: Bool
 
-    private var isProcessing: Bool {
-        if case .processing = viewModel.state {
-            return true
-        }
-        return false
+    private var availableTestCases: [TestCase] {
+        TestDataRepository.getTestCases(for: capability)
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                // Header
-                ZStack(alignment: .topLeading) {
-                    // Back Button
-                    Button(action: {
-                        viewModel.state = .idle
-                    }) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 20, weight: .medium))
-                            .foregroundStyle(.primary)
+        VStack(spacing: 0) {
+            HStack {
+                Button("Back") {
+                    dismiss()
+                }
+                Spacer()
+                Text(capability.displayName)
+                    .font(.headline)
+                Spacer()
+                Button("Back") { dismiss() }.opacity(0) // Balance spacer
+            }
+            .padding()
+            .background(Color(.systemBackground))
+            .overlay(Divider(), alignment: .bottom)
+
+            ScrollView {
+                VStack(spacing: 16) {
+                    Text(capability.description)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal)
+
+                    HStack(spacing: 12) {
+                        Button(action: {
+                            showTestDataSelector = true
+                        }) {
+                            Label("Load Test Data", systemImage: "doc.text.fill")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+
+                        Button(action: clearInput) {
+                            Label("Clear", systemImage: "trash")
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(inputText.isEmpty)
+                    }
+                    .padding(.horizontal)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Input Text")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+
+                        TextEditor(text: $inputText)
+                            .focused($isInputFocused)
+                            .frame(height: 150)
                             .padding(8)
                             .background(Color(.systemGray6))
-                            .clipShape(Circle())
-                    }
-                    .padding(.leading)
-                    
-                    VStack(spacing: 8) {
-                        Image(systemName: "cpu")
-                            .font(.system(size: 40))
-                            .foregroundStyle(.green.gradient)
-                        
-                        Text("Gemma 2B Ready")
-                            .font(.title2)
-                            .fontWeight(.semibold)
-                        
-                        Text("100% Offline • On-Device AI")
+                            .cornerRadius(8)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color(.systemGray4), lineWidth: 1)
+                            )
+
+                        Text("\(inputText.count) characters")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundColor(.secondary)
                     }
-                    .frame(maxWidth: .infinity)
-                }
-                .padding(.top)
-                
-                // Task Selector
-                Picker("Tarea", selection: $selectedTask) {
-                    Text(InferenceTask.summarize.title).tag(InferenceTask.summarize)
-                    Text(InferenceTask.rewriteFormal.title).tag(InferenceTask.rewriteFormal)
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal)
-                
-                // Input Text Field
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Texto de entrada:")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    
-                    TextEditor(text: $inputText)
-                        .focused($isInputFocused)
-                        .frame(height: 120)
-                        .padding(8)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(8)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color(.systemGray4), lineWidth: 1)
-                        )
-                }
-                .padding(.horizontal)
-                
-                // Execute Button
-                Button(action: {
-                    Task {
-                        await viewModel.runTaskInference(task: selectedTask, text: inputText)
-                    }
-                }) {
-                    HStack {
-                        if case .processing = viewModel.state {
-                            ProgressView()
-                                .progressViewStyle(.circular)
-                                .tint(.white)
-                        } else {
-                            Image(systemName: "play.fill")
-                        }
-                        
-                        if case .processing = viewModel.state {
-                            Text("Procesando...")
-                        } else {
-                            Text("Ejecutar")
-                        }
-                    }
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(isProcessing ? Color.gray.gradient : Color.green.gradient)
-                    .foregroundStyle(.white)
-                    .cornerRadius(12)
-                }
-                .disabled(inputText.isEmpty || isProcessing)
-                .padding(.horizontal)
-                
-                // Response Section
-                if !viewModel.generatedResponse.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Respuesta:")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                            
+                    .padding(.horizontal)
+                    .toolbar {
+                        ToolbarItemGroup(placement: .keyboard) {
                             Spacer()
-                            
-                            Button(action: {
-                                UIPasteboard.general.string = viewModel.generatedResponse
-                            }) {
-                                Label("Copiar", systemImage: "doc.on.doc")
-                                    .font(.caption)
+                            Button("Done") {
+                                isInputFocused = false
                             }
                         }
-                        
-                        ScrollView {
-                            Text(viewModel.generatedResponse)
+                    }
+
+                    Button(action: runInference) {
+                        HStack {
+                            if isProcessing {
+                                ProgressView()
+                                    .progressViewStyle(.circular)
+                                    .tint(.white)
+                            } else {
+                                Image(systemName: "play.fill")
+                            }
+
+                            Text(isProcessing ? "Processing..." : "Run Inference")
+                        }
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(isProcessing ? Color.gray : Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
+                    }
+                    .disabled(inputText.isEmpty || isProcessing)
+                    .padding(.horizontal)
+
+                    if let error = errorMessage {
+                        Text(error)
+                            .font(.subheadline)
+                            .foregroundColor(.red)
+                            .padding()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.red.opacity(0.1))
+                            .cornerRadius(8)
+                            .padding(.horizontal)
+                    }
+
+                    if !outputText.isEmpty {
+                        Divider()
+                            .padding(.vertical, 8)
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text("Output")
+                                    .font(.headline)
+                                    .fontWeight(.bold)
+
+                                Spacer()
+
+                                Button(action: {
+                                    UIPasteboard.general.string = outputText
+                                }) {
+                                    Label("Copy", systemImage: "doc.on.doc")
+                                        .font(.caption)
+                                }
+                            }
+
+                            Text(outputText)
                                 .font(.body)
                                 .textSelection(.enabled)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .multilineTextAlignment(.leading)
+                                .fixedSize(horizontal: false, vertical: true)
                                 .padding()
+                                .frame(maxWidth: .infinity, alignment: .leading)
                                 .background(Color(.systemGray6))
                                 .cornerRadius(8)
                         }
-                        .frame(maxHeight: 200)
+                        .padding(.horizontal)
                     }
-                    .padding(.horizontal)
+
+                    if let metrics = metrics {
+                        Divider()
+                            .padding(.vertical, 8)
+
+                        MetricsCard(metrics: metrics)
+                            .padding(.horizontal)
+                    }
                 }
+                .padding(.vertical)
+            }
+            .sheet(isPresented: $showTestDataSelector) {
+            TestDataSelector(
+                testCases: availableTestCases,
+                onTestCaseSelected: loadTestCase
+            )
+        }
+        .onAppear {
+            print("👁️ InferenceView appeared for \(capability.displayName)")
+            // Force a UI refresh if needed
+            errorMessage = nil
+        }
+    }
+}
+
+    private func loadTestCase(_ testCase: TestCase) {
+        selectedTestCase = testCase
+        inputText = testCase.inputText
+    }
+
+    private func clearInput() {
+        inputText = ""
+        outputText = ""
+        metrics = nil
+        errorMessage = nil
+        selectedTestCase = nil
+    }
+
+    private func runInference() {
+        isProcessing = true
+        errorMessage = nil
+        outputText = ""
+        metrics = nil
+        isInputFocused = false
+
+        Task {
+            do {
+                let task = capabilityToTask(capability)
+                let prompt = task.buildPrompt(with: inputText)
                 
-                Spacer()
-            }
-            .onTapGesture {
-                isInputFocused = false
-            }
-            .toolbar {
-                ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button("Listo") {
-                        isInputFocused = false
-                        viewModel.state = .idle
+                let formattedPrompt = """
+                <start_of_turn>user
+                \(prompt)<end_of_turn>
+                <start_of_turn>model
+                """
+
+                let inferenceMetrics = try await viewModel.llmInferenceService.generateResponseWithMetrics(
+                    capability: capability,
+                    inputText: inputText,
+                    prompt: formattedPrompt
+                ) { [weak viewModel] cumulativeText in
+                    Task { @MainActor in
+                        if !cumulativeText.isEmpty {
+                            self.outputText = cumulativeText
+                        }
                     }
                 }
+
+                await MainActor.run {
+                    if !inferenceMetrics.outputText.isEmpty {
+                        self.outputText = inferenceMetrics.outputText
+                    }
+                    self.metrics = inferenceMetrics
+                    self.isProcessing = false
+                    
+                    if self.outputText.isEmpty {
+                        print("⚠️ Warning: Inference finished but outputText is empty for \(capability.displayName)")
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    self.errorMessage = "Inference failed: \(error.localizedDescription)"
+                    self.isProcessing = false
+                }
             }
+        }
+    }
+
+    private func capabilityToTask(_ capability: InferenceCapability) -> InferenceTask {
+        switch capability {
+        case .summarization: return .summarize
+        case .proofreading: return .proofreading
+        case .rewriteFormal: return .rewriteFormal
+        case .rewriteCasual: return .rewriteCasual
+        case .rewriteConcise: return .rewriteConcise
         }
     }
 }
 
 #Preview {
-    InferenceView(viewModel: MainViewModel())
+    InferenceView(capability: .summarization, viewModel: MainViewModel())
 }

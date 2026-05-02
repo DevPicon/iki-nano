@@ -12,11 +12,14 @@ import Observation
 @Observable
 final class MainViewModel {
     // MARK: - Properties
-    private let modelFileService = ModelFileService()
-    private let llmInferenceService = LLMInferenceService()
+    let modelFileService = ModelFileService()
+    let llmInferenceService = LLMInferenceService()
 
     var state: AppState = .idle
     var generatedResponse: String = ""
+    
+    // The currently selected model for inference
+    var activeModel: LLMModel?
 
     // MARK: - Initialization
     init() {
@@ -26,13 +29,13 @@ final class MainViewModel {
     // MARK: - Model Management
     /// Check if model is already downloaded
     private func checkModelAvailability() {
-        // Don't auto-initialize, let user choose when to continue
         state = .idle
     }
     
-    /// Check if model is downloaded (public for UI)
+    /// Check if the active model is downloaded
     func isModelDownloaded() -> Bool {
-        return modelFileService.isModelDownloaded()
+        guard let activeModel = activeModel else { return false }
+        return modelFileService.isModelDownloaded(model: activeModel)
     }
 
     /// Initialize the model (called when user taps Continue)
@@ -42,38 +45,47 @@ final class MainViewModel {
         await initializeModel()
     }
 
-    /// Download the Gemma 2B model
+    /// Download the active model
     @MainActor
     func downloadModel() {
-        guard case .idle = state else { return }
+        guard case .idle = state, let activeModel = activeModel else { return }
 
         state = .downloading(progress: 0.0)
 
-        modelFileService.onProgress = { [weak self] progress in
-            guard let self = self else { return }
+        modelFileService.downloadModel(activeModel, onProgress: { [weak self] progress in
             Task { @MainActor in
-                self.state = .downloading(progress: progress)
+                self?.state = .downloading(progress: progress)
             }
-        }
-
-        modelFileService.onCompletion = { [weak self] result in
-            guard let self = self else { return }
+        }, onCompletion: { [weak self] result in
             Task { @MainActor in
                 switch result {
                 case .success:
-                    await self.initializeModel()
+                    await self?.initializeModel()
                 case .failure(let error):
-                    self.state = .error("Download failed: \(error.localizedDescription)")
+                    self?.state = .error("Download failed: \(error.localizedDescription)")
                 }
             }
-        }
+        })
+    }
 
-        modelFileService.downloadModel()
+    /// Cancel download for the active model
+    @MainActor
+    func cancelDownload() {
+        guard let activeModel = activeModel else { return }
+        modelFileService.cancelDownload(for: activeModel)
+        state = .idle
     }
 
     /// Initialize the LLM model
     private func initializeModel() async {
-        let modelPath = modelFileService.modelFilePath.path
+        guard let activeModel = activeModel else {
+            await MainActor.run {
+                state = .error("No active model selected")
+            }
+            return
+        }
+        
+        let modelPath = modelFileService.modelFilePath(for: activeModel).path
 
         do {
             try await llmInferenceService.initialize(modelPath: modelPath)
@@ -90,13 +102,15 @@ final class MainViewModel {
     /// Delete the downloaded model
     @MainActor
     func deleteModel() {
+        guard let activeModel = activeModel else { return }
+        
         state = .deleting
         
         Task {
             // Add delay for better UX
             try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
             
-            let result = modelFileService.deleteModel()
+            let result = modelFileService.deleteModel(activeModel)
 
             switch result {
             case .success:
@@ -160,7 +174,10 @@ final class MainViewModel {
 // MARK: - Inference Task Types
 enum InferenceTask {
     case summarize
+    case proofreading
     case rewriteFormal
+    case rewriteCasual
+    case rewriteConcise
 
     func buildPrompt(with text: String) -> String {
         switch self {
@@ -170,6 +187,17 @@ enum InferenceTask {
             Keep the key ideas, remove redundancies, and avoid adding new information.
             Return the summary in one short paragraph.
             Do not include any introductory phrases. Return ONLY the summary text.
+            Text:
+            \"\"\"
+            \(text)
+            \"\"\"
+            """
+        case .proofreading:
+            return """
+            Proofread the following text. Fix grammar, spelling, punctuation, and syntax errors.
+            Preserve the original meaning and style.
+            Return ONLY the corrected text without explanations.
+
             Text:
             \"\"\"
             \(text)
@@ -187,6 +215,29 @@ enum InferenceTask {
             \(text)
             \"\"\"
             """
+        case .rewriteCasual:
+            return """
+            Rewrite the following text in a casual, friendly tone.
+            Preserve the original meaning, use conversational language,
+            and make it more approachable.
+            Return only the rewritten text.
+            Do not include any introductory phrases. Return ONLY the rewritten text.
+            Text:
+            \"\"\"
+            \(text)
+            \"\"\"
+            """
+        case .rewriteConcise:
+            return """
+            Rewrite the following text to be more concise and direct.
+            Remove unnecessary words while preserving all key information.
+            Return only the rewritten text.
+            Do not include any introductory phrases. Return ONLY the rewritten text.
+            Text:
+            \"\"\"
+            \(text)
+            \"\"\"
+            """
         }
     }
 
@@ -194,8 +245,14 @@ enum InferenceTask {
         switch self {
         case .summarize:
             return "Resumir Texto"
+        case .proofreading:
+            return "Corregir Texto"
         case .rewriteFormal:
             return "Reescribir Formal"
+        case .rewriteCasual:
+            return "Reescribir Casual"
+        case .rewriteConcise:
+            return "Reescribir Conciso"
         }
     }
 }

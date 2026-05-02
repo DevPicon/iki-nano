@@ -1,0 +1,49 @@
+schema_version: "1.0"
+
+extension:
+  id: jira
+  name: "Jira Integration"
+  version: "1.0.0"
+  description: "Synchronize Spec-Driven Development workflow with Jira using MCP tools"
+  author: spec-kit-core
+  repository: https://github.com/github/spec-kit
+  license: MIT
+
+requires:
+  speckit_version: ">=0.2.0"
+  tools:
+    - name: mcp_jira
+      required: true
+
+provides:
+  commands:
+    - name: speckit.jira.discover-fields
+      file: commands/speckit.jira.discover-fields.md
+      description: "Discover Jira custom fields and suggest mapping configuration"
+    - name: speckit.jira.sync
+      file: commands/speckit.jira.sync.md
+      description: "Synchronize current spec and tasks to Jira issues"
+
+  config:
+    - name: "jira-config.yml"
+      template: "config-template.yml"
+      description: "Jira integration configuration"
+      required: false
+
+hooks:
+  after_taskstoissues:
+    command: speckit.jira.sync
+    optional: true
+    prompt: "Synchronize tasks to Jira?"
+    description: "Auto-sync to Jira after tasks-to-issues conversion"
+
+tags:
+  - "jira"
+  - "sync"
+  - "project-management"
+
+config:
+  defaults:
+    mcp_server: "atlassian"
+    project:
+      key: "FIXME"
