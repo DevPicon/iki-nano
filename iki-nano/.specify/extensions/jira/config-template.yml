@@ -1,0 +1,20 @@
+# Jira Integration Configuration
+
+# The name of your configured MCP server providing Jira tools
+mcp_server: "atlassian"
+
+project:
+  # Replace with your Jira Project Key (e.g., "PROJ")
+  key: "FIXME"
+
+mapping:
+  # Map Spec Kit concepts to Jira Issue Types
+  spec: "Epic"
+  phase: "Story"
+  task: "Task"
+
+# Custom Field Mappings (optional)
+# Run /speckit.jira.discover-fields to find your field IDs
+custom_fields:
+  # story_points: "customfield_10001"
+  # sprint: "customfield_10002"

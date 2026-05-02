@@ -24,7 +24,21 @@ struct InferenceView: View {
     }
 
     var body: some View {
-        NavigationView {
+        VStack(spacing: 0) {
+            HStack {
+                Button("Back") {
+                    dismiss()
+                }
+                Spacer()
+                Text(capability.displayName)
+                    .font(.headline)
+                Spacer()
+                Button("Back") { dismiss() }.opacity(0) // Balance spacer
+            }
+            .padding()
+            .background(Color(.systemBackground))
+            .overlay(Divider(), alignment: .bottom)
+
             ScrollView {
                 VStack(spacing: 16) {
                     Text(capability.description)
@@ -70,6 +84,14 @@ struct InferenceView: View {
                             .foregroundColor(.secondary)
                     }
                     .padding(.horizontal)
+                    .toolbar {
+                        ToolbarItemGroup(placement: .keyboard) {
+                            Spacer()
+                            Button("Done") {
+                                isInputFocused = false
+                            }
+                        }
+                    }
 
                     Button(action: runInference) {
                         HStack {
@@ -127,6 +149,8 @@ struct InferenceView: View {
                             Text(outputText)
                                 .font(.body)
                                 .textSelection(.enabled)
+                                .multilineTextAlignment(.leading)
+                                .fixedSize(horizontal: false, vertical: true)
                                 .padding()
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .background(Color(.systemGray6))
@@ -145,30 +169,19 @@ struct InferenceView: View {
                 }
                 .padding(.vertical)
             }
-            .navigationTitle(capability.displayName)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Back") {
-                        dismiss()
-                    }
-                }
-
-                ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button("Done") {
-                        isInputFocused = false
-                    }
-                }
-            }
             .sheet(isPresented: $showTestDataSelector) {
-                TestDataSelector(
-                    testCases: availableTestCases,
-                    onTestCaseSelected: loadTestCase
-                )
-            }
+            TestDataSelector(
+                testCases: availableTestCases,
+                onTestCaseSelected: loadTestCase
+            )
+        }
+        .onAppear {
+            print("👁️ InferenceView appeared for \(capability.displayName)")
+            // Force a UI refresh if needed
+            errorMessage = nil
         }
     }
+}
 
     private func loadTestCase(_ testCase: TestCase) {
         selectedTestCase = testCase
@@ -186,25 +199,48 @@ struct InferenceView: View {
     private func runInference() {
         isProcessing = true
         errorMessage = nil
+        outputText = ""
+        metrics = nil
+        isInputFocused = false
 
         Task {
             do {
                 let task = capabilityToTask(capability)
+                let prompt = task.buildPrompt(with: inputText)
+                
+                let formattedPrompt = """
+                <start_of_turn>user
+                \(prompt)<end_of_turn>
+                <start_of_turn>model
+                """
+
                 let inferenceMetrics = try await viewModel.llmInferenceService.generateResponseWithMetrics(
                     capability: capability,
                     inputText: inputText,
-                    prompt: task.buildPrompt(with: inputText)
-                )
+                    prompt: formattedPrompt
+                ) { [weak viewModel] cumulativeText in
+                    Task { @MainActor in
+                        if !cumulativeText.isEmpty {
+                            self.outputText = cumulativeText
+                        }
+                    }
+                }
 
                 await MainActor.run {
-                    outputText = inferenceMetrics.outputText
-                    metrics = inferenceMetrics
-                    isProcessing = false
+                    if !inferenceMetrics.outputText.isEmpty {
+                        self.outputText = inferenceMetrics.outputText
+                    }
+                    self.metrics = inferenceMetrics
+                    self.isProcessing = false
+                    
+                    if self.outputText.isEmpty {
+                        print("⚠️ Warning: Inference finished but outputText is empty for \(capability.displayName)")
+                    }
                 }
             } catch {
                 await MainActor.run {
-                    errorMessage = "Inference failed: \(error.localizedDescription)"
-                    isProcessing = false
+                    self.errorMessage = "Inference failed: \(error.localizedDescription)"
+                    self.isProcessing = false
                 }
             }
         }

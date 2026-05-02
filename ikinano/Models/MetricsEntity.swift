@@ -22,6 +22,7 @@ final class MetricsEntity {
     var outputCharCount: Int
 
     var modelLoadTimeMs: Int64?
+    var ttftMs: Int64?
     var inferenceTimeMs: Int64
     var totalTimeMs: Int64
 
@@ -40,6 +41,7 @@ final class MetricsEntity {
         outputTokenCount: Int,
         outputCharCount: Int,
         modelLoadTimeMs: Int64?,
+        ttftMs: Int64?,
         inferenceTimeMs: Int64,
         totalTimeMs: Int64,
         memoryUsedMB: Int64,
@@ -56,6 +58,7 @@ final class MetricsEntity {
         self.outputTokenCount = outputTokenCount
         self.outputCharCount = outputCharCount
         self.modelLoadTimeMs = modelLoadTimeMs
+        self.ttftMs = ttftMs
         self.inferenceTimeMs = inferenceTimeMs
         self.totalTimeMs = totalTimeMs
         self.memoryUsedMB = memoryUsedMB
@@ -77,6 +80,7 @@ extension InferenceMetrics {
             outputTokenCount: outputTokenCount,
             outputCharCount: outputCharCount,
             modelLoadTimeMs: modelLoadTimeMs,
+            ttftMs: ttftMs,
             inferenceTimeMs: inferenceTimeMs,
             totalTimeMs: totalTimeMs,
             memoryUsedMB: memoryUsedMB,
@@ -96,6 +100,7 @@ extension MetricsEntity {
             outputTokenCount: outputTokenCount,
             outputCharCount: outputCharCount,
             modelLoadTimeMs: modelLoadTimeMs,
+            ttftMs: ttftMs,
             inferenceTimeMs: inferenceTimeMs,
             totalTimeMs: totalTimeMs,
             memoryUsedMB: memoryUsedMB,

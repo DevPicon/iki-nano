@@ -20,6 +20,7 @@ struct InferenceMetrics: Codable, Identifiable {
     let outputCharCount: Int
 
     let modelLoadTimeMs: Int64?
+    let ttftMs: Int64?
     let inferenceTimeMs: Int64
     let totalTimeMs: Int64
 

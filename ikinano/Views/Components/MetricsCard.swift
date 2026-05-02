@@ -15,6 +15,9 @@ struct MetricsCard: View {
                 .fontWeight(.bold)
 
             MetricRow(label: "Latency", value: "\(formatNumber(metrics.inferenceTimeMs)) ms")
+            if let ttft = metrics.ttftMs {
+                MetricRow(label: "TTFT", value: "\(formatNumber(ttft)) ms")
+            }
             MetricRow(label: "Tokens", value: "\(formatNumber(metrics.inputTokenCount)) → \(formatNumber(metrics.outputTokenCount))")
             MetricRow(label: "Characters", value: "\(formatNumber(metrics.inputCharCount)) → \(formatNumber(metrics.outputCharCount))")
             MetricRow(label: "Memory", value: "\(formatNumber(metrics.memoryUsedMB)) MB")
@@ -68,6 +71,7 @@ struct MetricRow: View {
             outputTokenCount: 50,
             outputCharCount: 250,
             modelLoadTimeMs: nil,
+            ttftMs: 450,
             inferenceTimeMs: 1234,
             totalTimeMs: 1234,
             memoryUsedMB: 245,

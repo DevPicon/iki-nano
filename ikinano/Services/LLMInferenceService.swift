@@ -22,7 +22,7 @@ final class LLMInferenceService {
         if isInitialized && currentModelPath == modelPath { return }
 
         let options = LlmInference.Options(modelPath: modelPath)
-        options.maxTokens = 512
+        options.maxTokens = 1024
 
         llmInference = try LlmInference(options: options)
         isInitialized = true
@@ -65,11 +65,28 @@ final class LLMInferenceService {
             throw LLMError.modelNotInitialized
         }
 
-        // For now, use non-streaming and return full response
-        // MediaPipe GenAI API may not support streaming in this version
-        let result = try await generateResponse(prompt: prompt)
-        await MainActor.run {
-            onPartialResponse(result)
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            do {
+                try llmInference.generateResponseAsync(
+                    inputText: prompt,
+                    progress: { partialResponse, error in
+                        if let error = error {
+                            print("🤖 LLM Service: Streaming Error \(error)")
+                            return
+                        }
+                        
+                        if let partialResponse = partialResponse {
+                            onPartialResponse(partialResponse)
+                        }
+                    },
+                    completion: {
+                        continuation.resume()
+                    }
+                )
+            } catch {
+                print("🤖 LLM Service: Error \(error)")
+                continuation.resume(throwing: error)
+            }
         }
     }
 
@@ -78,12 +95,14 @@ final class LLMInferenceService {
     ///   - capability: The inference capability being used
     ///   - inputText: The raw input text
     ///   - prompt: The formatted prompt with instructions
+    ///   - onPartialResponse: Optional callback for streaming
     /// - Returns: InferenceMetrics containing output and performance data
     /// - Throws: Error if inference fails or model not initialized
     func generateResponseWithMetrics(
         capability: InferenceCapability,
         inputText: String,
-        prompt: String
+        prompt: String,
+        onPartialResponse: ((String) -> Void)? = nil
     ) async throws -> InferenceMetrics {
         guard llmInference != nil, isInitialized else {
             throw LLMError.modelNotInitialized
@@ -95,14 +114,27 @@ final class LLMInferenceService {
         let inputTokenCount = TokenCounter.estimateTokens(text: inputText)
         let inputCharCount = inputText.count
 
-        let outputText = try await generateResponse(prompt: prompt)
+        var finalOutputText = ""
+        var ttft: Int64? = nil
+
+        if let onPartialResponse = onPartialResponse {
+            try await generateResponseStream(prompt: prompt) { partial in
+                if ttft == nil {
+                    ttft = Int64(Date().timeIntervalSince(totalStartTime) * 1000)
+                }
+                finalOutputText += partial
+                onPartialResponse(finalOutputText)
+            }
+        } else {
+            finalOutputText = try await generateResponse(prompt: prompt)
+        }
 
         let totalEndTime = Date()
         let endMemory = MemoryTracker.getCurrentMemoryUsageMB()
         let peakMemory = MemoryTracker.getPeakMemoryMB()
 
-        let outputTokenCount = TokenCounter.estimateTokens(text: outputText)
-        let outputCharCount = outputText.count
+        let outputTokenCount = TokenCounter.estimateTokens(text: finalOutputText)
+        let outputCharCount = finalOutputText.count
 
         let totalTimeMs = Int64(totalEndTime.timeIntervalSince(totalStartTime) * 1000)
 
@@ -111,10 +143,11 @@ final class LLMInferenceService {
             inputText: inputText,
             inputTokenCount: inputTokenCount,
             inputCharCount: inputCharCount,
-            outputText: outputText,
+            outputText: finalOutputText,
             outputTokenCount: outputTokenCount,
             outputCharCount: outputCharCount,
             modelLoadTimeMs: nil,
+            ttftMs: ttft,
             inferenceTimeMs: totalTimeMs,
             totalTimeMs: totalTimeMs,
             memoryUsedMB: endMemory - startMemory,

@@ -1,4 +1,6 @@
-installed: []
+installed:
+- git
+- jira
 settings:
   auto_execute_hooks: true
 hooks:
@@ -145,4 +147,11 @@ hooks:
     optional: true
     prompt: Commit after syncing issues?
     description: Auto-commit after tasks-to-issues conversion
+    condition: null
+  - extension: jira
+    command: speckit.jira.sync
+    enabled: true
+    optional: true
+    prompt: Synchronize tasks to Jira?
+    description: Auto-sync to Jira after tasks-to-issues conversion
     condition: null
