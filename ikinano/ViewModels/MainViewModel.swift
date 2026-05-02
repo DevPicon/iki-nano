@@ -14,6 +14,7 @@ final class MainViewModel {
     // MARK: - Properties
     let modelFileService = ModelFileService()
     let llmInferenceService = LLMInferenceService()
+    var selectedCapability: InferenceCapability?
 
     var state: AppState = .idle
     var generatedResponse: String = ""
