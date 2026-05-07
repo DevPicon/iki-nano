@@ -52,7 +52,7 @@ final class InferenceViewModel {
         outputText = ""
         metrics = nil
 
-        let formattedPrompt = capabilityToTask(capability).buildPrompt(with: trimmedInput)
+        let formattedPrompt = capability.buildPrompt(with: trimmedInput)
 
         inferenceTask = Task { [weak self] in
             guard let self else { return }
@@ -85,21 +85,6 @@ final class InferenceViewModel {
                 isProcessing = false
                 inferenceTask = nil
             }
-        }
-    }
-
-    private func capabilityToTask(_ capability: InferenceCapability) -> InferenceTask {
-        switch capability {
-        case .summarization:
-            return .summarize
-        case .proofreading:
-            return .proofreading
-        case .rewriteFormal:
-            return .rewriteFormal
-        case .rewriteCasual:
-            return .rewriteCasual
-        case .rewriteConcise:
-            return .rewriteConcise
         }
     }
 }
