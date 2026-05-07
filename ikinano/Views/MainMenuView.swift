@@ -129,7 +129,7 @@ struct MainMenuView: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showingModelManagement) {
-                ModelManagementView(viewModel: viewModel)
+                ModelManagementView(appViewModel: viewModel)
             }
         }
     }

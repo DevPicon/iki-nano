@@ -7,20 +7,22 @@ import SwiftUI
 
 struct InferenceView: View {
     let capability: InferenceCapability
-    @Bindable var viewModel: MainViewModel
     @Environment(\.dismiss) var dismiss
 
-    @State private var inputText: String = ""
-    @State private var outputText: String = ""
-    @State private var metrics: InferenceMetrics?
-    @State private var isProcessing: Bool = false
-    @State private var errorMessage: String?
     @State private var showTestDataSelector: Bool = false
-    @State private var selectedTestCase: TestCase?
+    @State private var viewModel: InferenceViewModel
     @FocusState private var isInputFocused: Bool
 
     private var availableTestCases: [TestCase] {
         TestDataRepository.getTestCases(for: capability)
+    }
+
+    init(capability: InferenceCapability, viewModel: MainViewModel) {
+        self.capability = capability
+        _viewModel = State(initialValue: InferenceViewModel(
+            capability: capability,
+            inferenceService: viewModel.llmInferenceService
+        ))
     }
 
     var body: some View {
@@ -33,7 +35,7 @@ struct InferenceView: View {
                 Text(capability.displayName)
                     .font(.headline)
                 Spacer()
-                Button("Back") { dismiss() }.opacity(0) // Balance spacer
+                Button("Back") { dismiss() }.opacity(0)
             }
             .padding()
             .background(Color(.systemBackground))
@@ -47,9 +49,9 @@ struct InferenceView: View {
                         .padding(.horizontal)
 
                     HStack(spacing: 12) {
-                        Button(action: {
+                        Button {
                             showTestDataSelector = true
-                        }) {
+                        } label: {
                             Label("Load Test Data", systemImage: "doc.text.fill")
                                 .frame(maxWidth: .infinity)
                         }
@@ -59,7 +61,7 @@ struct InferenceView: View {
                             Label("Clear", systemImage: "trash")
                         }
                         .buttonStyle(.bordered)
-                        .disabled(inputText.isEmpty)
+                        .disabled(viewModel.inputText.isEmpty || viewModel.isProcessing)
                     }
                     .padding(.horizontal)
 
@@ -68,7 +70,7 @@ struct InferenceView: View {
                             .font(.subheadline)
                             .fontWeight(.medium)
 
-                        TextEditor(text: $inputText)
+                        TextEditor(text: $viewModel.inputText)
                             .focused($isInputFocused)
                             .frame(height: 150)
                             .padding(8)
@@ -78,8 +80,9 @@ struct InferenceView: View {
                                 RoundedRectangle(cornerRadius: 8)
                                     .stroke(Color(.systemGray4), lineWidth: 1)
                             )
+                            .disabled(viewModel.isProcessing)
 
-                        Text("\(inputText.count) characters")
+                        Text("\(viewModel.inputText.count) characters")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -95,7 +98,7 @@ struct InferenceView: View {
 
                     Button(action: runInference) {
                         HStack {
-                            if isProcessing {
+                            if viewModel.isProcessing {
                                 ProgressView()
                                     .progressViewStyle(.circular)
                                     .tint(.white)
@@ -103,19 +106,40 @@ struct InferenceView: View {
                                 Image(systemName: "play.fill")
                             }
 
-                            Text(isProcessing ? "Processing..." : "Run Inference")
+                            Text(viewModel.isProcessing ? "Processing..." : "Run Inference")
                         }
                         .font(.headline)
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(isProcessing ? Color.gray : Color.blue)
+                        .background(viewModel.isProcessing ? Color.gray : Color.blue)
                         .foregroundColor(.white)
                         .cornerRadius(12)
                     }
-                    .disabled(inputText.isEmpty || isProcessing)
+                    .disabled(viewModel.inputText.isEmpty || viewModel.isProcessing)
                     .padding(.horizontal)
 
-                    if let error = errorMessage {
+                    if viewModel.isProcessing {
+                        HStack(spacing: 12) {
+                            ProgressView()
+                                .progressViewStyle(.circular)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Generating response...")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                Text("The model is still processing the current request.")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.blue.opacity(0.08))
+                        .cornerRadius(12)
+                        .padding(.horizontal)
+                    }
+
+                    if let error = viewModel.errorMessage {
                         Text(error)
                             .font(.subheadline)
                             .foregroundColor(.red)
@@ -126,7 +150,7 @@ struct InferenceView: View {
                             .padding(.horizontal)
                     }
 
-                    if !outputText.isEmpty {
+                    if !viewModel.outputText.isEmpty {
                         Divider()
                             .padding(.vertical, 8)
 
@@ -138,15 +162,15 @@ struct InferenceView: View {
 
                                 Spacer()
 
-                                Button(action: {
-                                    UIPasteboard.general.string = outputText
-                                }) {
+                                Button {
+                                    UIPasteboard.general.string = viewModel.outputText
+                                } label: {
                                     Label("Copy", systemImage: "doc.on.doc")
                                         .font(.caption)
                                 }
                             }
 
-                            Text(outputText)
+                            Text(viewModel.outputText)
                                 .font(.body)
                                 .textSelection(.enabled)
                                 .multilineTextAlignment(.leading)
@@ -159,7 +183,7 @@ struct InferenceView: View {
                         .padding(.horizontal)
                     }
 
-                    if let metrics = metrics {
+                    if let metrics = viewModel.metrics {
                         Divider()
                             .padding(.vertical, 8)
 
@@ -170,90 +194,32 @@ struct InferenceView: View {
                 .padding(.vertical)
             }
             .sheet(isPresented: $showTestDataSelector) {
-            TestDataSelector(
-                testCases: availableTestCases,
-                onTestCaseSelected: loadTestCase
-            )
-        }
-        .onAppear {
-            print("👁️ InferenceView appeared for \(capability.displayName)")
-            // Force a UI refresh if needed
-            errorMessage = nil
-        }
-    }
-}
-
-    private func loadTestCase(_ testCase: TestCase) {
-        selectedTestCase = testCase
-        inputText = testCase.inputText
-    }
-
-    private func clearInput() {
-        inputText = ""
-        outputText = ""
-        metrics = nil
-        errorMessage = nil
-        selectedTestCase = nil
-    }
-
-    private func runInference() {
-        isProcessing = true
-        errorMessage = nil
-        outputText = ""
-        metrics = nil
-        isInputFocused = false
-
-        Task {
-            do {
-                let task = capabilityToTask(capability)
-                let prompt = task.buildPrompt(with: inputText)
-                
-                let formattedPrompt = """
-                <start_of_turn>user
-                \(prompt)<end_of_turn>
-                <start_of_turn>model
-                """
-
-                let inferenceMetrics = try await viewModel.llmInferenceService.generateResponseWithMetrics(
-                    capability: capability,
-                    inputText: inputText,
-                    prompt: formattedPrompt
-                ) { [weak viewModel] cumulativeText in
-                    Task { @MainActor in
-                        if !cumulativeText.isEmpty {
-                            self.outputText = cumulativeText
-                        }
-                    }
-                }
-
-                await MainActor.run {
-                    if !inferenceMetrics.outputText.isEmpty {
-                        self.outputText = inferenceMetrics.outputText
-                    }
-                    self.metrics = inferenceMetrics
-                    self.isProcessing = false
-                    
-                    if self.outputText.isEmpty {
-                        print("⚠️ Warning: Inference finished but outputText is empty for \(capability.displayName)")
-                    }
-                }
-            } catch {
-                await MainActor.run {
-                    self.errorMessage = "Inference failed: \(error.localizedDescription)"
-                    self.isProcessing = false
-                }
+                TestDataSelector(
+                    testCases: availableTestCases,
+                    onTestCaseSelected: loadTestCase
+                )
+            }
+            .onAppear {
+                print("👁️ InferenceView appeared for \(capability.displayName)")
+                viewModel.errorMessage = nil
+            }
+            .onDisappear {
+                viewModel.cancelInference()
             }
         }
     }
 
-    private func capabilityToTask(_ capability: InferenceCapability) -> InferenceTask {
-        switch capability {
-        case .summarization: return .summarize
-        case .proofreading: return .proofreading
-        case .rewriteFormal: return .rewriteFormal
-        case .rewriteCasual: return .rewriteCasual
-        case .rewriteConcise: return .rewriteConcise
-        }
+    private func loadTestCase(_ testCase: TestCase) {
+        viewModel.loadTestCase(testCase)
+    }
+
+    private func clearInput() {
+        viewModel.clear()
+    }
+
+    private func runInference() {
+        isInputFocused = false
+        viewModel.runInference()
     }
 }
 

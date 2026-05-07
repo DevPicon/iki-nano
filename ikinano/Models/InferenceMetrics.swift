@@ -5,11 +5,11 @@
 
 import Foundation
 
-struct InferenceMetrics: Codable, Identifiable {
-    let id: String = UUID().uuidString
-    let timestamp: Date = Date()
+struct InferenceMetrics: Identifiable {
+    var id: String = UUID().uuidString
+    var timestamp: Date = Date()
     let capability: InferenceCapability
-    let platform: String = "iOS/Gemma 2B"
+    var platform: String = "iOS/Gemma 2B"
 
     let inputText: String
     let inputTokenCount: Int
@@ -53,5 +53,75 @@ enum InferenceCapability: String, Codable {
         case .rewriteCasual: return "Rewrite text in a friendly, conversational tone"
         case .rewriteConcise: return "Rewrite text to be more direct and concise"
         }
+    }
+
+    func buildPrompt(with text: String) -> String {
+        let rawPrompt: String
+
+        switch self {
+        case .summarization:
+            rawPrompt = """
+            Summarize the following text in a concise and clear way.
+            Keep the key ideas, remove redundancies, and avoid adding new information.
+            Return the summary in one short paragraph.
+            Do not include any introductory phrases. Return ONLY the summary text.
+            Text:
+            \"\"\"
+            \(text)
+            \"\"\"
+            """
+        case .proofreading:
+            rawPrompt = """
+            Proofread the following text. Fix grammar, spelling, punctuation, and syntax errors.
+            Preserve the original meaning and style.
+            Return ONLY the corrected text without explanations.
+
+            Text:
+            \"\"\"
+            \(text)
+            \"\"\"
+            """
+        case .rewriteFormal:
+            rawPrompt = """
+            Rewrite the following text in a formal, professional tone.
+            Preserve the original meaning, improve clarity and grammar,
+            and remove casual expressions or slang.
+            Return only the rewritten text.
+            Do not include any introductory phrases. Return ONLY the rewritten text.
+            Text:
+            \"\"\"
+            \(text)
+            \"\"\"
+            """
+        case .rewriteCasual:
+            rawPrompt = """
+            Rewrite the following text in a casual, friendly tone.
+            Preserve the original meaning, use conversational language,
+            and make it more approachable.
+            Return only the rewritten text.
+            Do not include any introductory phrases. Return ONLY the rewritten text.
+            Text:
+            \"\"\"
+            \(text)
+            \"\"\"
+            """
+        case .rewriteConcise:
+            rawPrompt = """
+            Rewrite the following text to be more concise and direct.
+            Remove unnecessary words while preserving all key information.
+            Return only the rewritten text.
+            Do not include any introductory phrases. Return ONLY the rewritten text.
+            Text:
+            \"\"\"
+            \(text)
+            \"\"\"
+            """
+        }
+
+        return """
+        <start_of_turn>user
+        \(rawPrompt)<end_of_turn>
+        <start_of_turn>model
+        """
     }
 }

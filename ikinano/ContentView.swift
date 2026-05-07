@@ -14,27 +14,37 @@ struct ContentView: View {
     
     @Environment(\.modelContext) private var modelContext
 
+    private var blockingErrorMessage: String? {
+        if case .error(let message) = viewModel.state {
+            return message
+        }
+
+        return nil
+    }
+
     var body: some View {
-        Group {
-            switch viewModel.state {
-            case .error(let message):
+        ZStack {
+            MainMenuView(viewModel: viewModel) { capability in
+                viewModel.selectedCapability = capability
+                showInferenceView.toggle()
+            }
+            .sheet(isPresented: $showInferenceView) {
+                if let capability = viewModel.selectedCapability {
+                    InferenceView(capability: capability, viewModel: viewModel)
+                }
+            }
+            .onAppear {
+                // Ensure default models are loaded into SwiftData
+                let repo = LLMModelRepository(modelContext: modelContext)
+                try? repo.loadDefaultModelsIfNeeded()
+            }
+
+            if let message = blockingErrorMessage {
+                Color(.systemBackground)
+                    .ignoresSafeArea()
+
                 ErrorView(message: message) {
                     viewModel.state = .idle
-                }
-            default:
-                MainMenuView(viewModel: viewModel) { capability in
-                    viewModel.selectedCapability = capability
-                    showInferenceView.toggle()
-                }
-                .sheet(isPresented: $showInferenceView) {
-                    if let capability = viewModel.selectedCapability {
-                        InferenceView(capability: capability, viewModel: viewModel)
-                    }
-                }
-                .onAppear {
-                    // Ensure default models are loaded into SwiftData
-                    let repo = LLMModelRepository(modelContext: modelContext)
-                    try? repo.loadDefaultModelsIfNeeded()
                 }
             }
         }

@@ -1,0 +1,56 @@
+included:
+  - ikinano
+
+excluded:
+  - Pods
+  - docs
+  - screenshots
+  - specs
+  - ikinano.xcodeproj
+  - ikinano.xcworkspace
+
+opt_in_rules:
+  - empty_count
+  - explicit_init
+  - first_where
+  - force_unwrapping
+  - implicitly_unwrapped_optional
+  - modifier_order
+  - redundant_nil_coalescing
+  - sorted_imports
+  - vertical_whitespace_closing_braces
+
+disabled_rules:
+  - todo
+
+line_length:
+  warning: 140
+  error: 180
+  ignores_comments: true
+  ignores_urls: true
+
+file_length:
+  warning: 500
+  error: 700
+
+type_body_length:
+  warning: 300
+  error: 400
+
+function_body_length:
+  warning: 60
+  error: 90
+
+identifier_name:
+  min_length:
+    warning: 2
+  excluded:
+    - id
+    - x
+    - y
+
+nesting:
+  type_level:
+    warning: 2
+
+reporter: "github-actions-logging"
