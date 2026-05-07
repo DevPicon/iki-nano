@@ -8,92 +8,72 @@
 import Foundation
 import MediaPipeTasksGenAI
 
-/// Service responsible for LLM inference using MediaPipe
-final class LLMInferenceService {
+private final class StreamAggregationBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var finalOutputText = ""
+    private var ttft: Int64?
+
+    func append(_ partial: String, startedAt: Date) -> String {
+        lock.lock()
+        defer { lock.unlock() }
+
+        if ttft == nil {
+            ttft = Int64(Date().timeIntervalSince(startedAt) * 1000)
+        }
+
+        finalOutputText += partial
+        return finalOutputText
+    }
+
+    func snapshot() -> (outputText: String, ttft: Int64?) {
+        lock.lock()
+        defer { lock.unlock() }
+        return (finalOutputText, ttft)
+    }
+}
+
+actor MediaPipeLLMEngine: LLMEngine {
     private var llmInference: LlmInference?
-    private var isInitialized = false
     private var currentModelPath: String?
     private var currentSession: LlmInference.Session?
 
-    /// Initialize the LLM with the model file
-    /// - Parameter modelPath: Absolute path to the .bin model file
-    /// - Throws: Error if initialization fails
     func initialize(modelPath: String) async throws {
-        // If already initialized with the same path, return early
-        if isInitialized && currentModelPath == modelPath { return }
+        if llmInference != nil, currentModelPath == modelPath {
+            return
+        }
 
-        releaseResources()
+        await releaseResources()
 
         let options = LlmInference.Options(modelPath: modelPath)
         options.maxTokens = 1024
 
         llmInference = try LlmInference(options: options)
-        isInitialized = true
         currentModelPath = modelPath
     }
 
-    func cancelActiveGeneration() {
-        guard let currentSession else { return }
-
-        do {
-            try currentSession.cancelGenerateResponseAsync()
-        } catch {
-            print("🤖 LLM Service: Failed to cancel session \(error)")
-        }
-
-        self.currentSession = nil
-    }
-
-    func releaseResources() {
-        cancelActiveGeneration()
-        currentSession = nil
-        llmInference = nil
-        isInitialized = false
-        currentModelPath = nil
-    }
-
-    private func makeSession() throws -> LlmInference.Session {
-        guard let llmInference = llmInference, isInitialized else {
-            throw LLMError.modelNotInitialized
-        }
-
-        let session = try LlmInference.Session(llmInference: llmInference)
-        currentSession = session
-        return session
-    }
-
-    /// Generate a response for the given prompt
-    /// - Parameter prompt: The input text prompt
-    /// - Returns: The generated response text
-    /// - Throws: Error if inference fails or model not initialized
     func generateResponse(prompt: String) async throws -> String {
-        print("🤖 LLM Service: Generating response...")
+        print("🤖 LLM Engine: Generating response...")
         let session = try makeSession()
 
-        return try await withCheckedThrowingContinuation { [weak self] continuation in
+        return try await withCheckedThrowingContinuation { continuation in
             Task.detached {
                 do {
-                    print("🤖 LLM Service: Calling internal generateResponse")
                     try session.addQueryChunk(inputText: prompt)
                     let result = try session.generateResponse()
-                    print("🤖 LLM Service: Generated \(result.count) characters")
-                    self?.currentSession = nil
+                    Task { await self.clearSessionIfMatching(session) }
                     continuation.resume(returning: result)
                 } catch {
-                    print("🤖 LLM Service: Error \(error)")
-                    self?.currentSession = nil
+                    Task { await self.clearSessionIfMatching(session) }
                     continuation.resume(throwing: error)
                 }
             }
         }
     }
 
-    /// Generate a response with streaming updates
-    /// - Parameters:
-    ///   - prompt: The input text prompt
-    ///   - onPartialResponse: Callback for each partial response chunk
-    /// - Throws: Error if inference fails or model not initialized
-    func generateResponseStream(prompt: String, onPartialResponse: @escaping (String) -> Void) async throws {
+    func generateResponseStream(
+        prompt: String,
+        onPartialResponse: @escaping @Sendable (String) -> Void
+    ) async throws {
         let session = try makeSession()
         try session.addQueryChunk(inputText: prompt)
 
@@ -119,28 +99,100 @@ final class LLMInferenceService {
             do {
                 try session.generateResponseAsync(
                     progress: { partialResponse, error in
-                        if let error = error {
-                            print("🤖 LLM Service: Streaming Error \(error)")
-                            self.currentSession = nil
+                        if let error {
+                            print("🤖 LLM Engine: Streaming Error \(error)")
+                            Task { self.clearSessionIfMatching(session) }
                             resumeOnce(with: .failure(error))
                             return
                         }
 
-                        if let partialResponse = partialResponse {
+                        if let partialResponse {
                             onPartialResponse(partialResponse)
                         }
                     },
                     completion: {
-                        self.currentSession = nil
+                        Task { self.clearSessionIfMatching(session) }
                         resumeOnce(with: .success(()))
                     }
                 )
             } catch {
-                print("🤖 LLM Service: Error \(error)")
-                self.currentSession = nil
+                Task { self.clearSessionIfMatching(session) }
                 resumeOnce(with: .failure(error))
             }
         }
+    }
+
+    func cancelActiveGeneration() async {
+        guard let currentSession else { return }
+
+        do {
+            try currentSession.cancelGenerateResponseAsync()
+        } catch {
+            print("🤖 LLM Engine: Failed to cancel session \(error)")
+        }
+
+        self.currentSession = nil
+    }
+
+    func releaseResources() async {
+        await cancelActiveGeneration()
+        currentSession = nil
+        llmInference = nil
+        currentModelPath = nil
+    }
+
+    private func makeSession() throws -> LlmInference.Session {
+        guard let llmInference else {
+            throw LLMError.modelNotInitialized
+        }
+
+        let session = try LlmInference.Session(llmInference: llmInference)
+        currentSession = session
+        return session
+    }
+
+    private func clearSessionIfMatching(_ session: LlmInference.Session) {
+        guard currentSession === session else { return }
+        currentSession = nil
+    }
+}
+
+/// Service responsible for metrics and higher-level inference orchestration.
+final class LLMInferenceService {
+    private let engine: LLMEngine
+
+    init(engine: LLMEngine = MediaPipeLLMEngine()) {
+        self.engine = engine
+    }
+
+    func initialize(modelPath: String) async throws {
+        try await engine.initialize(modelPath: modelPath)
+    }
+
+    func cancelActiveGeneration() {
+        Task {
+            await engine.cancelActiveGeneration()
+        }
+    }
+
+    func releaseResources() {
+        Task {
+            await engine.releaseResources()
+        }
+    }
+
+    func generateResponse(prompt: String) async throws -> String {
+        try await engine.generateResponse(prompt: prompt)
+    }
+
+    func generateResponseStream(
+        prompt: String,
+        onPartialResponse: @escaping @Sendable (String) -> Void
+    ) async throws {
+        try await engine.generateResponseStream(
+            prompt: prompt,
+            onPartialResponse: onPartialResponse
+        )
     }
 
     /// Generate a response with comprehensive metrics collection
@@ -157,27 +209,24 @@ final class LLMInferenceService {
         prompt: String,
         onPartialResponse: ((String) -> Void)? = nil
     ) async throws -> InferenceMetrics {
-        guard llmInference != nil, isInitialized else {
-            throw LLMError.modelNotInitialized
-        }
-
         let totalStartTime = Date()
         let startMemory = MemoryTracker.getCurrentMemoryUsageMB()
 
         let inputTokenCount = TokenCounter.estimateTokens(text: inputText)
         let inputCharCount = inputText.count
 
+        let aggregationBox = StreamAggregationBox()
         var finalOutputText = ""
         var ttft: Int64? = nil
 
-        if let onPartialResponse = onPartialResponse {
+        if let onPartialResponse {
             try await generateResponseStream(prompt: prompt) { partial in
-                if ttft == nil {
-                    ttft = Int64(Date().timeIntervalSince(totalStartTime) * 1000)
-                }
-                finalOutputText += partial
-                onPartialResponse(finalOutputText)
+                let cumulativeText = aggregationBox.append(partial, startedAt: totalStartTime)
+                onPartialResponse(cumulativeText)
             }
+            let snapshot = aggregationBox.snapshot()
+            finalOutputText = snapshot.outputText
+            ttft = snapshot.ttft
         } else {
             finalOutputText = try await generateResponse(prompt: prompt)
         }

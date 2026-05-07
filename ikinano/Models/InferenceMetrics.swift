@@ -5,11 +5,11 @@
 
 import Foundation
 
-struct InferenceMetrics: Codable, Identifiable {
-    let id: String = UUID().uuidString
-    let timestamp: Date = Date()
+struct InferenceMetrics: Identifiable {
+    var id: String = UUID().uuidString
+    var timestamp: Date = Date()
     let capability: InferenceCapability
-    let platform: String = "iOS/Gemma 2B"
+    var platform: String = "iOS/Gemma 2B"
 
     let inputText: String
     let inputTokenCount: Int
