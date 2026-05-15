@@ -1,8 +1,16 @@
 # Ikinano
 
-A native iOS application for running on-device language models using MediaPipe.
+A native iOS application for running on-device language models using MediaPipe and LiteRT-LM.
 
-> **Educational Purpose:** This project is designed for learning and educational purposes, demonstrating how to integrate and run large language models on iOS devices using MediaPipe Tasks GenAI.
+> **Educational Purpose:** This project is designed for learning and educational purposes, demonstrating how to integrate and run large language models on iOS devices using both MediaPipe Tasks GenAI and Google's new LiteRT-LM framework.
+
+## Documentation
+
+For detailed information on implementation and building, see:
+- [Architecture & Main Flow](docs/architecture-main-flow.md)
+- [LiteRT-LM Implementation Notes](docs/implementation-notes.md)
+- [Build & Integration Instructions](docs/build-instructions.md)
+- [Gemma 4 E2B Research Plan](docs/litert-lm-gemma4-e2b-research-plan.md)
 
 ## Screenshots
 
@@ -86,15 +94,20 @@ open ikinano.xcworkspace
 
 ```
 ikinano/
+├── Frameworks/          # LiteRT-LM XCFramework
 ├── Models/              # Data models and app state
 ├── Views/               # SwiftUI views
 ├── ViewModels/          # View models (MVVM)
 ├── Services/            # Business logic and services
-│   ├── ModelFileService.swift       # Model download management
-│   └── LLMInferenceService.swift    # LLM inference
+│   ├── ModelFileService.swift       # Model download and validation
+│   ├── LLMInferenceEngine.swift     # Engine abstraction protocol
+│   ├── MediaPipeInferenceEngine.swift # MediaPipe implementation
+│   ├── LiteRTLMInferenceEngine.swift  # LiteRT-LM implementation
+│   └── LiteRTLM/                    # C++ Bridge and Runner
+├── Repositories/        # Data persistence (SwiftData)
 ├── Assets.xcassets/     # Images and assets
-├── Config.swift         # Local configuration (not committed)
-└── Config.swift.example # Configuration template
+├── Config.swift         # Feature flags and settings
+└── ikinano-Bridging-Header.h # Swift-C++ interoperability
 ```
 
 ## How It Works

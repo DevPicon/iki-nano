@@ -1,84 +1,118 @@
-# Technical Documentation: Main View & Application Flow
+# Technical Documentation: Application Architecture & Execution Flow
 
-This document details the architecture and execution flow of the **Iki Nano** application, specifically focusing on model selection, initialization, and inference navigation.
+This document details the multi-engine architecture and execution flow of the **Iki Nano** application, specifically focusing on how the app handles dynamic model switching between MediaPipe and LiteRT-LM.
 
-## 1. Architectural Overview
+## 1. High-Level Architecture
 
-The application follows a **MVVM (Model-ViewModel-View)** pattern, leveraging SwiftUI's modern `Observation` framework for state management.
-
-### Key Components:
-- **`MainMenuView.swift`**: The entry point UI that presents model status and inference capabilities.
-- **`MainViewModel.swift`**: The "brain" that coordinates between file services, inference services, and UI state.
-- **`AppState.swift`**: An enum defining the finite states of the application (`idle`, `downloading`, `initializing`, `ready`, etc.).
-- **`LLMInferenceService.swift`**: The low-level wrapper for the MediaPipe GenAI SDK.
-- **`InferenceView.swift`**: A generic view that handles the lifecycle of a specific AI task (Summarization, Proofreading, etc.).
-
----
-
-## 2. The Model Selection Flow
-
-### Phase A: Model Management
-1.  The user taps the "Modelo Activo" card in `MainMenuView`.
-2.  `ModelManagementView` is presented, listing available models from `LLMModelRepository`.
-3.  When a user selects a model, it is assigned to `viewModel.activeModel`.
-
-### Phase B: Download & Verification
-1.  The UI checks `viewModel.isModelDownloaded()`.
-2.  If not present, the user clicks "Download". 
-3.  `MainViewModel.downloadModel()` is called, which interacts with `ModelFileService`.
-4.  The `AppState` transitions to `.downloading(progress: X)`.
-5.  Upon completion, the app automatically transitions to the **Initialization** phase.
-
-### Phase C: Initialization (Loading into Memory)
-1.  `MainViewModel.initializeModel()` is triggered.
-2.  The `AppState` becomes `.initializing`.
-3.  `llmInferenceService.initialize(modelPath:)` is called. This loads the heavy `.bin` weights into the device's GPU/NPU memory.
-4.  Once the MediaPipe `LlmInference` instance is created, `AppState` becomes `.ready`.
-
----
-
-## 3. The Capability Selection Flow
-
-Once the state is `.ready`, the "Capabilities" (Summarization, Proofreading, etc.) in the `MainMenuView` become enabled.
-
-### Phase D: Navigation
-1.  User selects a capability (e.g., **Summarization**).
-2.  The `onCapabilitySelected` closure is triggered in `ContentView`.
-3.  `ContentView` sets the `selectedCapability` and toggles `showInferenceView`.
-4.  `InferenceView` is presented as a sheet, initialized with the specific `InferenceCapability`.
-
-### Phase E: Inference Execution
-1.  User enters text and taps **"Run Inference"**.
-2.  `InferenceView.runInference()` is called:
-    - It maps the `InferenceCapability` to an `InferenceTask` (which holds the prompt templates).
-    - It builds a **Gemma-formatted prompt** (using `<start_of_turn>user...`).
-    - It calls `llmInferenceService.generateResponseWithMetrics(...)`.
-3.  **Streaming Logic**:
-    - As the model generates tokens, `generateResponseStream` receives partial chunks.
-    - These chunks are **accumulated** in `finalOutputText`.
-    - The UI (`outputText` in `InferenceView`) is updated on the `MainActor` for every chunk.
-4.  **Completion**:
-    - When the model finishes, the final `InferenceMetrics` are returned.
-    - The UI displays the final text and the performance card (Latency, TTFT, etc.).
-
----
-
-## 4. State Diagram
+The application follows a **Decoupled MVVM (Model-ViewModel-View)** pattern. The key innovation is the **Inference Engine Abstraction**, which allows the UI to remain agnostic of the underlying ML framework.
 
 ```mermaid
 graph TD
-    Idle[AppState.idle] -->|Download| Downloading[AppState.downloading]
-    Downloading -->|Complete| Initializing[AppState.initializing]
-    Idle -->|Already Downloaded| Initializing
-    Initializing -->|Success| Ready[AppState.ready]
-    Ready -->|Select Capability| Inference[InferenceView]
-    Inference -->|Run| Processing[AppState.processing]
-    Processing -->|Partial Chunk| Inference
-    Processing -->|Done| Ready
-    Any -->|Error| Error[AppState.error]
+    subgraph UI_Layer [UI Layer - SwiftUI]
+        MenuView[MainMenuView]
+        InferenceV[InferenceView]
+        MgmtView[ModelManagementView]
+    end
+
+    subgraph ViewModel_Layer [ViewModel Layer]
+        MainVM[MainViewModel]
+        MetricsVM[MetricsViewModel]
+    end
+
+    subgraph Service_Layer [Service Layer]
+        Factory[LLMInferenceEngineFactory]
+        EngineProtocol[LLMInferenceEngine Protocol]
+        MediaPipe[MediaPipeInferenceEngine]
+        LiteRTLM[LiteRTLMInferenceEngine]
+        FileService[ModelFileService]
+    end
+
+    subgraph Bridge_Layer [C++ Bridge]
+        Bridge[LiteRTLMBridge Obj-C++]
+        Runner[LiteRTLMRunner C++]
+    end
+
+    MenuView --> MainVM
+    InferenceV --> MainVM
+    MgmtV --> MainVM
+    
+    MainVM --> Factory
+    Factory --> EngineProtocol
+    EngineProtocol <|-- MediaPipe
+    EngineProtocol <|-- LiteRTLM
+    
+    LiteRTLM --> Bridge
+    Bridge --> Runner
+    MainVM --> FileService
 ```
 
-## 5. Summary of State Bindings
+---
 
-- **ViewModel -> View**: The `@Observable` macro ensures that when `viewModel.state` or `viewModel.generatedResponse` changes, the UI updates automatically without manual notifications.
-- **InferenceView**: Uses local `@State` for `inputText` and `outputText` to keep the specific task state isolated from the global menu state.
+## 2. The Engine Initialization Flow
+
+When a user selects a model in the `ModelManagementView`, the following sequence occurs:
+
+1.  **Selection**: The `activeModel` is updated in `MainViewModel`.
+2.  **Factory Check**: `MainViewModel` calls `LLMInferenceEngineFactory.makeEngine(for: activeModel)`.
+3.  **Engine Swap**: If the engine type changes (e.g., from MediaPipe to LiteRT-LM), the previous engine is deallocated to free up memory.
+4.  **Loading**: The new engine's `initialize(model:modelPath:)` method is called.
+    *   **MediaPipe**: Loads the `.bin` weights directly using the GenAI SDK.
+    *   **LiteRT-LM**: Initializes the C++ `Engine` and `Conversation` via the Objective-C++ bridge.
+5.  **Ready State**: The `AppState` transitions to `.ready`, enabling the capabilities menu.
+
+---
+
+## 3. Inference Execution Flow (Streaming)
+
+The inference flow is standardized across all engines, ensuring a consistent "typewriter" effect in the UI.
+
+```mermaid
+sequenceDiagram
+    participant User
+    subgraph UI
+        participant View as InferenceView
+        participant VM as MainViewModel
+    end
+    subgraph Engine
+        participant Proto as LLMInferenceEngine
+        participant JSON as JSON Parser
+    end
+    participant SDK as ML Framework (SDK)
+
+    User->>View: Tap "Run Inference"
+    View->>VM: runInference(text)
+    VM->>Proto: generateResponseStream(prompt)
+    
+    loop Token Generation
+        SDK->>Proto: Partial Chunk (Raw)
+        alt is LiteRT-LM
+            Proto->>JSON: Parse Chunk
+            JSON-->>Proto: Clean Text
+        end
+        Proto-->>VM: Update Partial String
+        VM-->>View: Refresh UI
+    end
+    
+    SDK-->>Proto: Completion
+    Proto-->>VM: Final Metrics
+    VM-->>View: Display Performance Card
+```
+
+---
+
+## 4. Model Integrity & Validation
+
+Critical for the 2.6GB Gemma 4 model, the `ModelFileService` implements a strict validation gate:
+
+1.  **Download**: Standard `URLSessionDownloadTask`.
+2.  **Size Check**: Preliminary verification to catch failed/HTML responses.
+3.  **Checksum**: A full SHA-256 scan is performed.
+4.  **Persistence**: If valid, the `isDownloadedPersistent` flag is set in SwiftData, triggering a reactive UI update.
+
+---
+
+## 5. Summary of Key Decisions
+
+- **Symbol Isolation**: LiteRT-LM internal symbols are hidden using a linker export list to prevent collisions with MediaPipe's internal Google dependencies.
+- **JSON Adapters**: The engine layer is responsible for converting SDK-specific formats (like LiteRT-LM's structured JSON) into plain text before it reaches the ViewModel.
+- **Reactive State**: The app uses stored persistent flags instead of file-system polling to ensure the UI is always in sync with the download status.
