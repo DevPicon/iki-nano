@@ -14,6 +14,12 @@ struct MetricsCard: View {
                 .font(.headline)
                 .fontWeight(.bold)
 
+            if let modelName = metrics.modelName {
+                MetricRow(label: "Model", value: modelName)
+            }
+            if let engineKind = metrics.engineKind {
+                MetricRow(label: "Engine", value: metrics.backend.map { "\(engineKind) / \($0)" } ?? engineKind)
+            }
             MetricRow(label: "Latency", value: "\(formatNumber(metrics.inferenceTimeMs)) ms")
             if let ttft = metrics.ttftMs {
                 MetricRow(label: "TTFT", value: "\(formatNumber(ttft)) ms")
@@ -64,6 +70,10 @@ struct MetricRow: View {
     MetricsCard(
         metrics: InferenceMetrics(
             capability: .summarization,
+            platform: "iOS/MediaPipe",
+            modelName: "Gemma 2B (int4)",
+            engineKind: LLMEngineKind.mediaPipe.rawValue,
+            backend: LLMBackendPreference.automatic.rawValue,
             inputText: "Sample input",
             inputTokenCount: 100,
             inputCharCount: 500,
@@ -80,4 +90,3 @@ struct MetricRow: View {
     )
     .padding()
 }
-

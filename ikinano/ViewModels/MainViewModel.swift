@@ -13,8 +13,7 @@ import Observation
 final class MainViewModel {
     // MARK: - Properties
     let modelFileService = ModelFileService()
-    let llmInferenceService = LLMInferenceService()
-    var selectedCapability: InferenceCapability?
+    private var activeEngine: LLMInferenceEngine?
 
     var state: AppState = .idle
     var generatedResponse: String = ""
@@ -89,8 +88,11 @@ final class MainViewModel {
         let modelPath = modelFileService.modelFilePath(for: activeModel).path
 
         do {
-            try await llmInferenceService.initialize(modelPath: modelPath)
+            await activeEngine?.reset()
+            let engine = LLMInferenceEngineFactory.makeEngine(for: activeModel)
+            try await engine.initialize(model: activeModel, modelPath: modelPath)
             await MainActor.run {
+                activeEngine = engine
                 state = .ready
             }
         } catch {
@@ -115,6 +117,8 @@ final class MainViewModel {
 
             switch result {
             case .success:
+                await activeEngine?.reset()
+                activeEngine = nil
                 state = .idle
                 generatedResponse = ""
             case .failure(let error):
@@ -139,7 +143,7 @@ final class MainViewModel {
 
         do {
             // Use streaming for better UX
-            try await llmInferenceService.generateResponseStream(prompt: prompt) { [weak self] partialResponse in
+            try await runInferenceStream(prompt: .user(prompt)) { [weak self] partialResponse in
                 guard let self = self else { return }
                 print("📦 Received response chunk: \(partialResponse.prefix(50))...")
                 self.generatedResponse = partialResponse
@@ -159,16 +163,44 @@ final class MainViewModel {
     ///   - text: The input text
     @MainActor
     func runTaskInference(task: InferenceTask, text: String) async {
-        let rawPrompt = task.buildPrompt(with: text)
-        
-        // Wrap prompt in Gemma instruction format
-        let formattedPrompt = """
-        <start_of_turn>user
-        \(rawPrompt)<end_of_turn>
-        <start_of_turn>model
-        """
-        
-        await runInference(prompt: formattedPrompt)
+        await runInference(prompt: task.buildPrompt(with: text))
+    }
+
+    func generateResponseWithMetrics(
+        capability: InferenceCapability,
+        inputText: String,
+        onPartialResponse: (@MainActor (String) -> Void)? = nil
+    ) async throws -> InferenceMetrics {
+        guard case .ready = state else {
+            throw LLMError.modelNotInitialized
+        }
+
+        let task = InferenceTask(capability: capability)
+        let prompt = LLMUserPrompt.user(task.buildPrompt(with: inputText))
+        guard let activeEngine else {
+            throw LLMError.modelNotInitialized
+        }
+
+        return try await activeEngine.generateResponseWithMetrics(
+            capability: capability,
+            inputText: inputText,
+            prompt: prompt,
+            onPartialResponse: onPartialResponse
+        )
+    }
+
+    private func runInferenceStream(
+        prompt: LLMUserPrompt,
+        onPartialResponse: @escaping @MainActor (String) -> Void
+    ) async throws {
+        guard let activeEngine else {
+            throw LLMError.modelNotInitialized
+        }
+
+        try await activeEngine.generateResponseStream(
+            prompt: prompt,
+            onPartialResponse: onPartialResponse
+        )
     }
 }
 
@@ -254,6 +286,23 @@ enum InferenceTask {
             return "Reescribir Casual"
         case .rewriteConcise:
             return "Reescribir Conciso"
+        }
+    }
+}
+
+extension InferenceTask {
+    init(capability: InferenceCapability) {
+        switch capability {
+        case .summarization:
+            self = .summarize
+        case .proofreading:
+            self = .proofreading
+        case .rewriteFormal:
+            self = .rewriteFormal
+        case .rewriteCasual:
+            self = .rewriteCasual
+        case .rewriteConcise:
+            self = .rewriteConcise
         }
     }
 }

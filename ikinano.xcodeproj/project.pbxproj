@@ -8,18 +8,43 @@
 
 /* Begin PBXBuildFile section */
 		A617F403A8E1BAA37F2941F1 /* Pods_ikinano.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8536836E62AFCF85CCFCE010 /* Pods_ikinano.framework */; };
+		C49D65FACCFB770173855269 /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 894D87EE0419E1DEC52DC962 /* AudioToolbox.framework */; };
+		C6509FCC7B32692B48FA01A5 /* LiteRTLM.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 0107AC4A551B1446E5ACD9C4 /* LiteRTLM.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		CAB352FFBF063EF0E0F0ACD4 /* LiteRTLM.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0107AC4A551B1446E5ACD9C4 /* LiteRTLM.xcframework */; };
+		CAE3C679282A1EF95105481F /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DC93B27261CDD39548F32EEB /* AVFoundation.framework */; };
+		E2EA12CAE5BF0F4DCE66319B /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2FAD3E6AB3B26114B11F2E00 /* CoreAudio.framework */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		3AAE5EB7E146750E01C877F5 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				C6509FCC7B32692B48FA01A5 /* LiteRTLM.xcframework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		0107AC4A551B1446E5ACD9C4 /* LiteRTLM.xcframework */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = wrapper.xcframework; name = LiteRTLM.xcframework; path = Frameworks/LiteRTLM.xcframework; sourceTree = "<group>"; };
+		2FAD3E6AB3B26114B11F2E00 /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
 		3F328EB42EE2888D0089AA94 /* ikinano.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ikinano.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		72D5957122DBE066FEAC0E91 /* Pods-ikinano.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ikinano.release.xcconfig"; path = "Target Support Files/Pods-ikinano/Pods-ikinano.release.xcconfig"; sourceTree = "<group>"; };
 		7C6137ECB29FC3657C9F3081 /* Pods-ikinano.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ikinano.debug.xcconfig"; path = "Target Support Files/Pods-ikinano/Pods-ikinano.debug.xcconfig"; sourceTree = "<group>"; };
 		8536836E62AFCF85CCFCE010 /* Pods_ikinano.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_ikinano.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		894D87EE0419E1DEC52DC962 /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
+		DC93B27261CDD39548F32EEB /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		3F328EB62EE2888D0089AA94 /* ikinano */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = ikinano;
 			sourceTree = "<group>";
 		};
@@ -31,6 +56,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				A617F403A8E1BAA37F2941F1 /* Pods_ikinano.framework in Frameworks */,
+				CAB352FFBF063EF0E0F0ACD4 /* LiteRTLM.xcframework in Frameworks */,
+				CAE3C679282A1EF95105481F /* AVFoundation.framework in Frameworks */,
+				C49D65FACCFB770173855269 /* AudioToolbox.framework in Frameworks */,
+				E2EA12CAE5BF0F4DCE66319B /* CoreAudio.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -68,6 +97,10 @@
 			isa = PBXGroup;
 			children = (
 				8536836E62AFCF85CCFCE010 /* Pods_ikinano.framework */,
+				0107AC4A551B1446E5ACD9C4 /* LiteRTLM.xcframework */,
+				DC93B27261CDD39548F32EEB /* AVFoundation.framework */,
+				894D87EE0419E1DEC52DC962 /* AudioToolbox.framework */,
+				2FAD3E6AB3B26114B11F2E00 /* CoreAudio.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -83,6 +116,7 @@
 				3F328EB02EE2888D0089AA94 /* Sources */,
 				3F328EB12EE2888D0089AA94 /* Frameworks */,
 				3F328EB22EE2888D0089AA94 /* Resources */,
+				3AAE5EB7E146750E01C877F5 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
@@ -312,8 +346,45 @@
 					"\"${PODS_ROOT}/MediaPipeTasksGenAIC/frameworks\"",
 					"\"${PODS_XCFRAMEWORKS_BUILD_DIR}/MediaPipeTasksGenAI\"",
 					"\"${PODS_XCFRAMEWORKS_BUILD_DIR}/MediaPipeTasksGenAIC\"",
+					"\"$(SRCROOT)/Frameworks\"",
+					"\"$(SRCROOT)/Frameworks\"",
+					"\"$(SRCROOT)/Frameworks\"",
+					"\"$(SRCROOT)/Frameworks\"",
+					"\"$(SRCROOT)/Frameworks\"",
+					"\"$(SRCROOT)/Frameworks\"",
+					"\"$(SRCROOT)/Frameworks\"",
+					"\"$(SRCROOT)/Frameworks\"",
+					"\"$(SRCROOT)/Frameworks\"",
+					"\"$(SRCROOT)/Frameworks\"",
+					"\"$(SRCROOT)/Frameworks\"",
+					"\"$(SRCROOT)/Frameworks\"",
+					"\"$(SRCROOT)/Frameworks\"",
 				);
 				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64/LiteRTLM.framework/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64_x86_64-simulator/LiteRTLM.framework/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64-simulator/LiteRTLM.framework/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64/LiteRTLM.framework/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64_x86_64-simulator/LiteRTLM.framework/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64-simulator/LiteRTLM.framework/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64-simulator/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64-simulator/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64-simulator/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64/LiteRTLM.framework/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64_x86_64-simulator/LiteRTLM.framework/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64-simulator/LiteRTLM.framework/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64/LiteRTLM.framework/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64_x86_64-simulator/LiteRTLM.framework/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64-simulator/LiteRTLM.framework/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64/LiteRTLM.framework/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64_x86_64-simulator/LiteRTLM.framework/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64-simulator/LiteRTLM.framework/Headers\"",
+				);
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -327,8 +398,10 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
+				LIBRARY_SEARCH_PATHS = "$(inherited)";
 				MACOSX_DEPLOYMENT_TARGET = 15.6;
 				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = "$(inherited)";
 				PRODUCT_BUNDLE_IDENTIFIER = dev.picon.ios.ikinano;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -338,6 +411,8 @@
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "ikinano/ikinano-Bridging-Header.h";
+				SWIFT_OBJC_INTEROP_MODE = objcxx;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
@@ -365,8 +440,45 @@
 					"\"${PODS_ROOT}/MediaPipeTasksGenAIC/frameworks\"",
 					"\"${PODS_XCFRAMEWORKS_BUILD_DIR}/MediaPipeTasksGenAI\"",
 					"\"${PODS_XCFRAMEWORKS_BUILD_DIR}/MediaPipeTasksGenAIC\"",
+					"\"$(SRCROOT)/Frameworks\"",
+					"\"$(SRCROOT)/Frameworks\"",
+					"\"$(SRCROOT)/Frameworks\"",
+					"\"$(SRCROOT)/Frameworks\"",
+					"\"$(SRCROOT)/Frameworks\"",
+					"\"$(SRCROOT)/Frameworks\"",
+					"\"$(SRCROOT)/Frameworks\"",
+					"\"$(SRCROOT)/Frameworks\"",
+					"\"$(SRCROOT)/Frameworks\"",
+					"\"$(SRCROOT)/Frameworks\"",
+					"\"$(SRCROOT)/Frameworks\"",
+					"\"$(SRCROOT)/Frameworks\"",
+					"\"$(SRCROOT)/Frameworks\"",
 				);
 				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64/LiteRTLM.framework/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64_x86_64-simulator/LiteRTLM.framework/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64-simulator/LiteRTLM.framework/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64/LiteRTLM.framework/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64_x86_64-simulator/LiteRTLM.framework/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64-simulator/LiteRTLM.framework/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64-simulator/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64-simulator/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64-simulator/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64/LiteRTLM.framework/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64_x86_64-simulator/LiteRTLM.framework/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64-simulator/LiteRTLM.framework/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64/LiteRTLM.framework/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64_x86_64-simulator/LiteRTLM.framework/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64-simulator/LiteRTLM.framework/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64/LiteRTLM.framework/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64_x86_64-simulator/LiteRTLM.framework/Headers\"",
+					"\"$(SRCROOT)/Frameworks/LiteRTLM.xcframework/ios-arm64-simulator/LiteRTLM.framework/Headers\"",
+				);
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -380,8 +492,10 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
+				LIBRARY_SEARCH_PATHS = "$(inherited)";
 				MACOSX_DEPLOYMENT_TARGET = 15.6;
 				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = "$(inherited)";
 				PRODUCT_BUNDLE_IDENTIFIER = dev.picon.ios.ikinano;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -391,6 +505,8 @@
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "ikinano/ikinano-Bridging-Header.h";
+				SWIFT_OBJC_INTEROP_MODE = objcxx;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";

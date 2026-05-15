@@ -12,6 +12,9 @@ final class MetricsEntity {
     var timestamp: Date
     var capability: String
     var platform: String
+    var modelName: String?
+    var engineKind: String?
+    var backend: String?
 
     var inputText: String
     var inputTokenCount: Int
@@ -34,6 +37,9 @@ final class MetricsEntity {
         timestamp: Date,
         capability: String,
         platform: String,
+        modelName: String?,
+        engineKind: String?,
+        backend: String?,
         inputText: String,
         inputTokenCount: Int,
         inputCharCount: Int,
@@ -51,6 +57,9 @@ final class MetricsEntity {
         self.timestamp = timestamp
         self.capability = capability
         self.platform = platform
+        self.modelName = modelName
+        self.engineKind = engineKind
+        self.backend = backend
         self.inputText = inputText
         self.inputTokenCount = inputTokenCount
         self.inputCharCount = inputCharCount
@@ -73,6 +82,9 @@ extension InferenceMetrics {
             timestamp: timestamp,
             capability: capability.rawValue,
             platform: platform,
+            modelName: modelName,
+            engineKind: engineKind,
+            backend: backend,
             inputText: inputText,
             inputTokenCount: inputTokenCount,
             inputCharCount: inputCharCount,
@@ -93,6 +105,10 @@ extension MetricsEntity {
     func toDomain() -> InferenceMetrics {
         InferenceMetrics(
             capability: InferenceCapability(rawValue: capability) ?? .summarization,
+            platform: platform,
+            modelName: modelName,
+            engineKind: engineKind,
+            backend: backend,
             inputText: inputText,
             inputTokenCount: inputTokenCount,
             inputCharCount: inputCharCount,

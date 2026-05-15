@@ -1,0 +1,17 @@
+framework module LiteRTLM {
+  umbrella header "LiteRTLM.h"
+  export *
+  module * { export * }
+  link "System"
+  link "dl"
+  link "m"
+  link "objc"
+  link "pthread"
+  link "resolv"
+  link framework "AVFoundation"
+  link framework "AudioToolbox"
+  link framework "CoreFoundation"
+  link framework "Foundation"
+  link framework "Metal"
+  link framework "Security"
+}
