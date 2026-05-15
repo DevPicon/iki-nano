@@ -6,10 +6,13 @@
 import Foundation
 
 struct InferenceMetrics: Codable, Identifiable {
-    let id: String = UUID().uuidString
-    let timestamp: Date = Date()
+    let id: String
+    let timestamp: Date
     let capability: InferenceCapability
-    let platform: String = "iOS/Gemma 2B"
+    let platform: String
+    let modelName: String?
+    let engineKind: String?
+    let backend: String?
 
     let inputText: String
     let inputTokenCount: Int
@@ -26,6 +29,48 @@ struct InferenceMetrics: Codable, Identifiable {
 
     let memoryUsedMB: Int64
     let peakMemoryMB: Int64
+
+    init(
+        id: String = UUID().uuidString,
+        timestamp: Date = Date(),
+        capability: InferenceCapability,
+        platform: String,
+        modelName: String?,
+        engineKind: String?,
+        backend: String?,
+        inputText: String,
+        inputTokenCount: Int,
+        inputCharCount: Int,
+        outputText: String,
+        outputTokenCount: Int,
+        outputCharCount: Int,
+        modelLoadTimeMs: Int64?,
+        ttftMs: Int64?,
+        inferenceTimeMs: Int64,
+        totalTimeMs: Int64,
+        memoryUsedMB: Int64,
+        peakMemoryMB: Int64
+    ) {
+        self.id = id
+        self.timestamp = timestamp
+        self.capability = capability
+        self.platform = platform
+        self.modelName = modelName
+        self.engineKind = engineKind
+        self.backend = backend
+        self.inputText = inputText
+        self.inputTokenCount = inputTokenCount
+        self.inputCharCount = inputCharCount
+        self.outputText = outputText
+        self.outputTokenCount = outputTokenCount
+        self.outputCharCount = outputCharCount
+        self.modelLoadTimeMs = modelLoadTimeMs
+        self.ttftMs = ttftMs
+        self.inferenceTimeMs = inferenceTimeMs
+        self.totalTimeMs = totalTimeMs
+        self.memoryUsedMB = memoryUsedMB
+        self.peakMemoryMB = peakMemoryMB
+    }
 }
 
 enum InferenceCapability: String, Codable {

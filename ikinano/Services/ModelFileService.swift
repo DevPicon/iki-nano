@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import CryptoKit
 
 /// Service responsible for downloading and managing LLM model files
 final class ModelFileService: NSObject {
@@ -97,18 +98,27 @@ extension ModelFileService: URLSessionDownloadDelegate {
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
         guard let state = activeDownloads[downloadTask.taskIdentifier] else { return }
         
+        print("ModelFileService: Download finished to temporary location: \(location)")
+        
         do {
+            print("ModelFileService: Validating file for \(state.model.name)...")
+            try validateDownloadedFile(at: location, for: state.model)
+            print("ModelFileService: Validation successful.")
+
             let destinationURL = modelFilePath(for: state.model)
+            print("ModelFileService: Moving file to: \(destinationURL.path)")
             
             if FileManager.default.fileExists(atPath: destinationURL.path) {
                 try FileManager.default.removeItem(at: destinationURL)
             }
             try FileManager.default.moveItem(at: location, to: destinationURL)
             
+            print("ModelFileService: File moved successfully.")
             DispatchQueue.main.async {
                 state.onCompletion(.success(destinationURL))
             }
         } catch {
+            print("ModelFileService: ERROR during validation/move: \(error.localizedDescription)")
             DispatchQueue.main.async {
                 state.onCompletion(.failure(error))
             }
@@ -133,6 +143,9 @@ extension ModelFileService: URLSessionDownloadDelegate {
 enum ModelFileError: LocalizedError {
     case invalidURL
     case modelNotFound
+    case invalidModelFormat(expected: String)
+    case invalidModelSize(expected: Int64, actual: Int64)
+    case checksumMismatch(expected: String, actual: String)
     
     var errorDescription: String? {
         switch self {
@@ -140,6 +153,76 @@ enum ModelFileError: LocalizedError {
             return "La URL del modelo no es válida."
         case .modelNotFound:
             return "El modelo no se encontró en el dispositivo."
+        case .invalidModelFormat(let expected):
+            return "El archivo descargado no tiene el formato esperado: \(expected)."
+        case .invalidModelSize(let expected, let actual):
+            return "El tamaño del modelo no coincide. Esperado: \(expected) bytes. Recibido: \(actual) bytes."
+        case .checksumMismatch(let expected, let actual):
+            return "La verificación SHA-256 falló. Esperado: \(expected). Recibido: \(actual)."
         }
+    }
+}
+
+private extension ModelFileService {
+    func validateDownloadedFile(at location: URL, for model: LLMModel) throws {
+        try validateFormat(for: model)
+
+        let attributes = try FileManager.default.attributesOfItem(atPath: location.path)
+        if let expectedSizeBytes = model.expectedSizeBytes,
+           let actualSizeBytes = attributes[.size] as? NSNumber {
+            
+            // Allow a small tolerance or just check for a minimum threshold (10MB)
+            // to catch HTML error pages, but rely on SHA256 for integrity.
+            let minimumThreshold: Int64 = 10 * 1024 * 1024 
+            if actualSizeBytes.int64Value < minimumThreshold {
+                throw ModelFileError.invalidModelSize(
+                    expected: expectedSizeBytes,
+                    actual: actualSizeBytes.int64Value
+                )
+            }
+        }
+
+        if let expectedSHA256 = model.sha256, !expectedSHA256.isEmpty {
+            print("ModelFileService: Starting SHA-256 checksum verification (this may take a few seconds)...")
+            let actualSHA256 = try sha256HexDigest(for: location)
+            print("ModelFileService: Checksum calculated: \(actualSHA256)")
+            
+            guard actualSHA256.caseInsensitiveCompare(expectedSHA256) == .orderedSame else {
+                throw ModelFileError.checksumMismatch(
+                    expected: expectedSHA256,
+                    actual: actualSHA256
+                )
+            }
+        }
+    }
+
+    func validateFormat(for model: LLMModel) throws {
+        switch model.modelFormat {
+        case .bin:
+            guard model.localFilename.hasSuffix(".bin") else {
+                throw ModelFileError.invalidModelFormat(expected: ".bin")
+            }
+        case .litertlm:
+            guard model.localFilename.hasSuffix(".litertlm") else {
+                throw ModelFileError.invalidModelFormat(expected: ".litertlm")
+            }
+        }
+    }
+
+    func sha256HexDigest(for fileURL: URL) throws -> String {
+        let fileHandle = try FileHandle(forReadingFrom: fileURL)
+        defer {
+            try? fileHandle.close()
+        }
+
+        var hasher = SHA256()
+        while autoreleasepool(invoking: {
+            let data = fileHandle.readData(ofLength: 1024 * 1024)
+            guard !data.isEmpty else { return false }
+            hasher.update(data: data)
+            return true
+        }) {}
+
+        return hasher.finalize().map { String(format: "%02x", $0) }.joined()
     }
 }

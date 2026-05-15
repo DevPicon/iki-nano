@@ -72,11 +72,11 @@ final class MetricsViewModel {
     }
 
     func exportToCSV() -> String {
-        var csv = "Timestamp,Platform,Capability,InputTokens,OutputTokens,InferenceTimeMs,MemoryMB\n"
+        var csv = "Timestamp,Platform,Model,Engine,Backend,Capability,InputTokens,OutputTokens,InferenceTimeMs,MemoryMB\n"
 
         for metrics in allMetrics {
             let timestamp = ISO8601DateFormatter().string(from: metrics.timestamp)
-            csv += "\(timestamp),\(metrics.platform),\(metrics.capability.rawValue),\(metrics.inputTokenCount),\(metrics.outputTokenCount),\(metrics.inferenceTimeMs),\(metrics.memoryUsedMB)\n"
+            csv += "\(timestamp),\(metrics.platform),\(metrics.modelName ?? ""),\(metrics.engineKind ?? ""),\(metrics.backend ?? ""),\(metrics.capability.rawValue),\(metrics.inputTokenCount),\(metrics.outputTokenCount),\(metrics.inferenceTimeMs),\(metrics.memoryUsedMB)\n"
         }
 
         return csv

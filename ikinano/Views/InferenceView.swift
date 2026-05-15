@@ -205,20 +205,10 @@ struct InferenceView: View {
 
         Task {
             do {
-                let task = capabilityToTask(capability)
-                let prompt = task.buildPrompt(with: inputText)
-                
-                let formattedPrompt = """
-                <start_of_turn>user
-                \(prompt)<end_of_turn>
-                <start_of_turn>model
-                """
-
-                let inferenceMetrics = try await viewModel.llmInferenceService.generateResponseWithMetrics(
+                let inferenceMetrics = try await viewModel.generateResponseWithMetrics(
                     capability: capability,
                     inputText: inputText,
-                    prompt: formattedPrompt
-                ) { [weak viewModel] cumulativeText in
+                ) { cumulativeText in
                     Task { @MainActor in
                         if !cumulativeText.isEmpty {
                             self.outputText = cumulativeText
@@ -243,16 +233,6 @@ struct InferenceView: View {
                     self.isProcessing = false
                 }
             }
-        }
-    }
-
-    private func capabilityToTask(_ capability: InferenceCapability) -> InferenceTask {
-        switch capability {
-        case .summarization: return .summarize
-        case .proofreading: return .proofreading
-        case .rewriteFormal: return .rewriteFormal
-        case .rewriteCasual: return .rewriteCasual
-        case .rewriteConcise: return .rewriteConcise
         }
     }
 }

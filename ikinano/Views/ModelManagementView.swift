@@ -19,12 +19,10 @@ struct ModelManagementView: View {
                 ForEach(models) { model in
                     ModelRowView(model: model, viewModel: viewModel)
                         .swipeActions(edge: .trailing) {
-                            if model.isCustom {
-                                Button(role: .destructive) {
-                                    deleteModel(model)
-                                } label: {
-                                    Label("Eliminar registro", systemImage: "trash")
-                                }
+                            Button(role: .destructive) {
+                                deleteModel(model)
+                            } label: {
+                                Label("Eliminar registro", systemImage: "trash")
                             }
                         }
                 }
@@ -33,8 +31,13 @@ struct ModelManagementView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: { showingAddSheet = true }) {
-                        Image(systemName: "plus")
+                    HStack {
+                        Button(action: { resetDatabase() }) {
+                            Image(systemName: "arrow.counterclockwise.circle")
+                        }
+                        Button(action: { showingAddSheet = true }) {
+                            Image(systemName: "plus")
+                        }
                     }
                 }
                 ToolbarItem(placement: .topBarLeading) {
@@ -86,12 +89,19 @@ struct ModelManagementView: View {
         if model.isDownloaded {
             _ = viewModel.modelFileService.deleteModel(model)
         }
+        model.isDownloadedPersistent = false
         if viewModel.activeModel?.id == model.id {
             viewModel.activeModel = nil
             viewModel.state = .idle
         }
         let repo = LLMModelRepository(modelContext: modelContext)
         try? repo.removeModel(model)
+    }
+
+    private func resetDatabase() {
+        let repo = LLMModelRepository(modelContext: modelContext)
+        try? repo.deleteAllModels()
+        try? repo.loadDefaultModelsIfNeeded()
     }
 }
 
@@ -101,6 +111,8 @@ struct ModelRowView: View {
     
     @State private var downloadProgress: Double?
     @State private var isDownloading = false
+    @State private var errorAlertMessage: String?
+    @State private var showErrorAlert = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -114,6 +126,11 @@ struct ModelRowView: View {
                         .background(Color.blue.opacity(0.2))
                         .cornerRadius(4)
                 }
+                Text(model.engineKind.displayName)
+                    .font(.caption2)
+                    .padding(4)
+                    .background(Color.secondary.opacity(0.15))
+                    .cornerRadius(4)
                 Spacer()
                 
                 if viewModel.activeModel?.id == model.id {
@@ -127,6 +144,15 @@ struct ModelRowView: View {
                 .foregroundColor(.secondary)
                 .lineLimit(1)
                 .truncationMode(.middle)
+
+            HStack {
+                Text("\(model.modelFormat.displayName) · \(model.backendPreference.displayName)")
+                if let size = model.expectedSizeBytes {
+                    Text("· \(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))")
+                }
+            }
+            .font(.caption2)
+            .foregroundColor(.secondary)
             
             HStack {
                 if model.isDownloaded {
@@ -147,6 +173,7 @@ struct ModelRowView: View {
                     
                     Button(role: .destructive, action: {
                         _ = viewModel.modelFileService.deleteModel(model)
+                        model.isDownloadedPersistent = false
                         if viewModel.activeModel?.id == model.id {
                             viewModel.activeModel = nil
                             viewModel.state = .idle
@@ -179,6 +206,14 @@ struct ModelRowView: View {
                         viewModel.modelFileService.downloadModel(model, onProgress: { progress in
                             self.downloadProgress = progress
                         }, onCompletion: { result in
+                            switch result {
+                            case .success:
+                                model.isDownloadedPersistent = true
+                            case .failure(let error):
+                                model.isDownloadedPersistent = false
+                                self.errorAlertMessage = error.localizedDescription
+                                self.showErrorAlert = true
+                            }
                             self.isDownloading = false
                             self.downloadProgress = nil
                         })
@@ -186,6 +221,14 @@ struct ModelRowView: View {
                     .buttonStyle(.bordered)
                 }
             }
+        }
+        .alert("Error de Descarga", isPresented: $showErrorAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(errorAlertMessage ?? "Ocurrió un error desconocido")
+        }
+        .onAppear {
+            model.isDownloadedPersistent = model.isDownloaded
         }
         .padding(.vertical, 4)
     }

@@ -10,6 +10,7 @@ import SwiftData
 
 struct ContentView: View {
     @State private var viewModel = MainViewModel()
+    @State private var selectedCapability: InferenceCapability?
     @State private var showInferenceView: Bool = false
     
     @Environment(\.modelContext) private var modelContext
@@ -23,11 +24,11 @@ struct ContentView: View {
                 }
             default:
                 MainMenuView(viewModel: viewModel) { capability in
-                    viewModel.selectedCapability = capability
-                    showInferenceView.toggle()
+                    selectedCapability = capability
+                    showInferenceView = true
                 }
                 .sheet(isPresented: $showInferenceView) {
-                    if let capability = viewModel.selectedCapability {
+                    if let capability = selectedCapability {
                         InferenceView(capability: capability, viewModel: viewModel)
                     }
                 }
