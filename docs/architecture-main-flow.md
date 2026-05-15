@@ -7,31 +7,43 @@
   The application follows a **Decoupled MVVM (Model-ViewModel-View)** pattern. The key innovation is the **Inference Engine Abstraction**, which allows the UI to remain agnostic of the underlying ML framework.
 
   ```mermaid
-  sequenceDiagram
-      participant User
-      participant View as InferenceView
-      participant VM as MainViewModel
-      participant SDK as ML Framework SDK
-      participant Proto as LLMInferenceEngine
-      participant JSON as JSON Parser
-  
-      User->>View: Tap "Run Inference"
-      View->>VM: runInference(text)
-      VM->>Proto: generateResponseStream(prompt)
-      
-      loop Token Generation
-          SDK->>Proto: Partial Chunk (Raw)
-          alt is LiteRT-LM
-              Proto->>JSON: Parse Chunk
-              JSON-->>Proto: Clean Text
-          end
-          Proto-->>VM: Update Partial String
-          VM-->>View: Refresh UI
-      end
-      
-      SDK-->>Proto: Completion
-      Proto-->>VM: Final Metrics
-      VM-->>View: Display Performance Card
+  graph TD
+    subgraph UI_Layer [UI Layer - SwiftUI]
+        MenuView[MainMenuView]
+        InferenceV[InferenceView]
+        MgmtView[ModelManagementView]
+    end
+
+    subgraph ViewModel_Layer [ViewModel Layer]
+        MainVM[MainViewModel]
+        MetricsVM[MetricsViewModel]
+    end
+
+    subgraph Service_Layer [Service Layer]
+        Factory[LLMInferenceEngineFactory]
+        EngineProtocol[LLMInferenceEngine Protocol]
+        MediaPipe[MediaPipeInferenceEngine]
+        LiteRTLM[LiteRTLMInferenceEngine]
+        FileService[ModelFileService]
+    end
+
+    subgraph Bridge_Layer [C++ Bridge]
+        Bridge[LiteRTLMBridge Obj-C++]
+        Runner[LiteRTLMRunner C++]
+    end
+
+    MenuView --> MainVM
+    InferenceV --> MainVM
+    MgmtView --> MainVM
+    
+    MainVM --> Factory
+    Factory --> EngineProtocol
+    EngineProtocol --> LiteRTLM
+    EngineProtocol --> MediaPipe
+    
+    LiteRTLM --> Bridge
+    Bridge --> Runner
+    MainVM --> FileService
   ```
 
   ---
@@ -56,30 +68,30 @@
 
   ```mermaid
   sequenceDiagram
-      participant User
-      participant View as InferenceView
-      participant VM as MainViewModel
-      participant Proto as LLMInferenceEngine
-      participant JSON as JSON Parser
-      participant SDK as ML Framework (SDK)
-  
-      User->>View: Tap "Run Inference"
-      View->>VM: runInference(text)
-      VM->>Proto: generateResponseStream(prompt)
-      
-      loop Token Generation
-          SDK->>Proto: Partial Chunk (Raw)
-          alt is LiteRT-LM
-              Proto->>JSON: Parse Chunk
-              JSON-->>Proto: Clean Text
-          end
-          Proto-->>VM: Update Partial String
-          VM-->>View: Refresh UI
-      end
-      
-      SDK-->>Proto: Completion
-      Proto-->>VM: Final Metrics
-      VM-->>View: Display Performance Card
+    participant User
+    participant View as InferenceView
+    participant VM as MainViewModel
+    participant Proto as LLMInferenceEngine
+    participant JSON as JSON Parser
+    participant SDK as ML Framework (SDK)
+
+    User->>View: Tap "Run Inference"
+    View->>VM: runInference(text)
+    VM->>Proto: generateResponseStream(prompt)
+    
+    loop Token Generation
+        SDK->>Proto: Partial Chunk (Raw)
+        alt is LiteRT-LM
+            Proto->>JSON: Parse Chunk
+            JSON-->>Proto: Clean Text
+        end
+        Proto-->>VM: Update Partial String
+        VM-->>View: Refresh UI
+    end
+    
+    SDK-->>Proto: Completion
+    Proto-->>VM: Final Metrics
+    VM-->>View: Display Performance Card
   ```
 
   ---
