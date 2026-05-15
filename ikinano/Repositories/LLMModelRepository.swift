@@ -42,6 +42,7 @@ class LLMModelRepository {
                 supportsSpeculativeDecoding: true,
                 expectedSizeBytes: 2_588_147_712,
                 sha256: "181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c",
+                defaultContextLength: 4096,
                 requiresPromptTemplateFormatting: false
             )
             modelContext.insert(liteRTModel)

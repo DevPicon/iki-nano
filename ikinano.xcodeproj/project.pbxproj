@@ -43,8 +43,6 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		3F328EB62EE2888D0089AA94 /* ikinano */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = ikinano;
 			sourceTree = "<group>";
 		};

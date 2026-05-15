@@ -17,6 +17,7 @@
 - (BOOL)initializeWithModelPath:(NSString *)modelPath
                         backend:(LiteRTLMBackend)backend
      enableSpeculativeDecoding:(BOOL)enableSpeculativeDecoding
+                     maxTokens:(NSInteger)maxTokens
                         error:(NSError * _Nullable * _Nullable)error {
     
     LiteRTLMRunner::Config config;
@@ -36,6 +37,7 @@
     }
     
     config.enable_speculative_decoding = enableSpeculativeDecoding;
+    config.max_tokens = (int)maxTokens;
     
     if (_runner->Initialize(config)) {
         return YES;

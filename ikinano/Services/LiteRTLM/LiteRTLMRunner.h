@@ -26,7 +26,7 @@ public:
         std::string model_path;
         Backend backend = Backend::CPU;
         bool enable_speculative_decoding = false;
-        int max_tokens = 1024;
+        int max_tokens = 4096;
     };
 
     enum class ErrorCode {

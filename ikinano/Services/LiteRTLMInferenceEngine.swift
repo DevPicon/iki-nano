@@ -27,7 +27,8 @@ class LiteRTLMInferenceEngine: LLMInferenceEngine {
             try bridge.initialize(
                 withModelPath: modelPath,
                 backend: bridgeBackend,
-                enableSpeculativeDecoding: model.supportsSpeculativeDecoding
+                enableSpeculativeDecoding: model.supportsSpeculativeDecoding,
+                maxTokens: model.defaultContextLength ?? 4096
             )
             self.modelLoadTimeMs = Int64(Date().timeIntervalSince(startTime) * 1000)
             self.isInitialized = true

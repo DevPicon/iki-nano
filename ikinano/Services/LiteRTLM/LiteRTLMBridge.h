@@ -26,6 +26,7 @@ typedef NS_ENUM(NSInteger, LiteRTLMErrorCode) {
 - (BOOL)initializeWithModelPath:(NSString *)modelPath
                         backend:(LiteRTLMBackend)backend
      enableSpeculativeDecoding:(BOOL)enableSpeculativeDecoding
+                     maxTokens:(NSInteger)maxTokens
                         error:(NSError * _Nullable * _Nullable)error;
 
 - (NSString *)sendMessage:(NSString *)text;
